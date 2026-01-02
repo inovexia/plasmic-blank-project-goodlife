@@ -3,6 +3,7 @@ import { PlasmicCanvasHost } from '@plasmicapp/loader-nextjs';
 import { PLASMIC } from '@/plasmic-init';
 import AlertBox from '../components/AlertBox';
 import PrizeScratchCard from '../components/PrizeScratchCard';
+import QuizFlow from '../components/QuizFlow';
 
 // ✅ Register WITHOUT meta.importPath
 PLASMIC.registerComponent(AlertBox, {
@@ -42,6 +43,20 @@ PLASMIC.registerComponent(PrizeScratchCard, {
 
     showClose: { type: 'boolean', defaultValue: true },
   },
+});
+
+export const PLASMIC = initPlasmicLoader({
+  projects: [
+    {
+      id: 'YOUR_PROJECT_ID',
+      token: 'YOUR_PUBLIC_TOKEN',
+    },
+  ],
+});
+
+PLASMIC.registerComponent(QuizFlow, {
+  name: 'QuizFlow',
+  props: {},
 });
 
 
