@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 export default function QuizFlow({
   questionColor = '#ffffff',
   questionFontSize = 36,
