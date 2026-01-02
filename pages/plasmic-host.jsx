@@ -45,15 +45,6 @@ PLASMIC.registerComponent(PrizeScratchCard, {
   },
 });
 
-export const PLASMIC = initPlasmicLoader({
-  projects: [
-    {
-      id: 'YOUR_PROJECT_ID',
-      token: 'YOUR_PUBLIC_TOKEN',
-    },
-  ],
-});
-
 PLASMIC.registerComponent(QuizFlow, {
   name: 'QuizFlow',
   props: {},
