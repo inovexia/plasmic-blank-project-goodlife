@@ -47,8 +47,49 @@ PLASMIC.registerComponent(PrizeScratchCard, {
 
 PLASMIC.registerComponent(QuizFlow, {
   name: 'QuizFlow',
-  props: {},
+  props: {
+    questionColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+    },
+    questionFontSize: {
+      type: 'number',
+      defaultValue: 36,
+    },
+
+    optionColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+    },
+    optionFontSize: {
+      type: 'number',
+      defaultValue: 18,
+    },
+
+    correctColor: {
+      type: 'color',
+      defaultValue: 'green',
+    },
+    incorrectColor: {
+      type: 'color',
+      defaultValue: 'red',
+    },
+
+    buttonText: {
+      type: 'string',
+      defaultValue: 'Next',
+    },
+    buttonBg: {
+      type: 'color',
+      defaultValue: '#0b4a8b',
+    },
+    buttonColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+    },
+  },
 });
+
 
 
 export default function PlasmicHost() {

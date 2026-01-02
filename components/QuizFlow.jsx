@@ -1,15 +1,26 @@
-import { useEffect, useState } from 'react';
+export default function QuizFlow({
+  questionColor = '#ffffff',
+  questionFontSize = 36,
 
-export default function QuizFlow() {
-  const [questions, setQuestions] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [showFeedback, setShowFeedback] = useState(false);
+  optionColor = '#ffffff',
+  optionFontSize = 18,
 
-  useEffect(() => {
+  correctColor = 'green',
+  incorrectColor = 'red',
+
+  buttonText = 'Next',
+  buttonBg = '#0b4a8b',
+  buttonColor = '#ffffff',
+}) {
+  const [questions, setQuestions] = React.useState([]);
+  const [current, setCurrent] = React.useState(0);
+  const [selected, setSelected] = React.useState(null);
+  const [showFeedback, setShowFeedback] = React.useState(false);
+
+  React.useEffect(() => {
     fetch('/api/quiz')
       .then((res) => res.json())
-      .then((data) => setQuestions(data));
+      .then(setQuestions);
   }, []);
 
   if (!questions.length) return null;
@@ -18,32 +29,55 @@ export default function QuizFlow() {
   const isCorrect = selected === q.correctIndex;
 
   return (
-    <div style={{ padding: 40 }}>
-      <h1>{q.question}</h1>
+    <div>
+      <h1
+        style={{
+          color: questionColor,
+          fontSize: questionFontSize,
+        }}
+      >
+        {q.question}
+      </h1>
 
-      {q.options.map((opt, index) => (
-        <label key={index} style={{ display: 'block', margin: '10px 0' }}>
+      {q.options.map((opt, i) => (
+        <label key={i} style={{ display: 'block', margin: '12px 0' }}>
           <input
             type='radio'
             name='option'
-            checked={selected === index}
+            checked={selected === i}
             onChange={() => {
-              setSelected(index);
+              setSelected(i);
               setShowFeedback(true);
             }}
           />
-          {opt}
+          <span
+            style={{
+              color: optionColor,
+              fontSize: optionFontSize,
+              marginLeft: 8,
+            }}
+          >
+            {opt}
+          </span>
         </label>
       ))}
 
       {showFeedback && (
-        <p style={{ color: isCorrect ? 'green' : 'red' }}>
+        <p style={{ color: isCorrect ? correctColor : incorrectColor }}>
           {isCorrect ? q.correctFeedback : q.incorrectFeedback}
         </p>
       )}
 
       {showFeedback && (
         <button
+          style={{
+            background: buttonBg,
+            color: buttonColor,
+            padding: '12px 24px',
+            marginTop: 20,
+            border: 'none',
+            cursor: 'pointer',
+          }}
           onClick={() => {
             setSelected(null);
             setShowFeedback(false);
@@ -51,7 +85,7 @@ export default function QuizFlow() {
           }}
           disabled={current === questions.length - 1}
         >
-          Next
+          {buttonText}
         </button>
       )}
     </div>
