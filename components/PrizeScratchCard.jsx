@@ -1,5 +1,44 @@
 import { useEffect, useRef, useState } from 'react';
 
+/* ================== STYLES (FIXED) ================== */
+const overlayStyle = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.5)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 9999,
+};
+
+const popupStyle = {
+  position: 'relative',
+  padding: 24,
+  borderRadius: 12,
+  textAlign: 'center',
+  width: 320,
+};
+
+const buttonStyle = {
+  marginTop: 16,
+  padding: '10px 20px',
+  borderRadius: 6,
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: 16,
+};
+
+const closeStyle = {
+  position: 'absolute',
+  top: 10,
+  right: 10,
+  border: 'none',
+  background: 'transparent',
+  fontSize: 20,
+  cursor: 'pointer',
+};
+/* ==================================================== */
+
 export default function PrizeScratchCard({
   width = 300,
   height = 180,
@@ -7,7 +46,6 @@ export default function PrizeScratchCard({
 
   apiUrl,
   imageKey = 'file',
-
   fallbackImage = 'https://picsum.photos/400/300',
 
   scratchThreshold = 60,
@@ -25,39 +63,26 @@ export default function PrizeScratchCard({
   const canvasRef = useRef(null);
   const [showPopup, setShowPopup] = useState(false);
   const [prizeImage, setPrizeImage] = useState(null);
-  const [error, setError] = useState(false);
 
-  /* ✅ FETCH IMAGE SAFELY */
+  /* ================== FETCH IMAGE ================== */
   useEffect(() => {
     if (!apiUrl) {
       setPrizeImage(fallbackImage);
       return;
     }
 
-    // Direct image API (no JSON)
-    if (!imageKey) {
-      setPrizeImage(apiUrl);
-      return;
-    }
-
     fetch(apiUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error('API failed');
-        return res.json();
-      })
+      .then((res) => res.json())
       .then((data) => {
         const img = data?.[imageKey];
-        if (!img) throw new Error('Invalid image key');
-        setPrizeImage(img);
+        setPrizeImage(img || fallbackImage);
       })
       .catch(() => {
-        console.warn('ScratchCard API failed, using fallback image');
-        setError(true);
         setPrizeImage(fallbackImage);
       });
   }, [apiUrl, imageKey, fallbackImage]);
 
-  /* ✅ INIT SCRATCH ONLY WHEN IMAGE IS READY */
+  /* ================== SCRATCH LOGIC ================== */
   useEffect(() => {
     if (!prizeImage || !canvasRef.current) return;
 
@@ -70,7 +95,6 @@ export default function PrizeScratchCard({
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = coverColor;
     ctx.fillRect(0, 0, width, height);
-
     ctx.globalCompositeOperation = 'destination-out';
 
     let isDrawing = false;
@@ -83,26 +107,16 @@ export default function PrizeScratchCard({
 
     const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
-      const touch = e.touches?.[0];
+      const t = e.touches?.[0];
       return {
-        x: (touch ? touch.clientX : e.clientX) - rect.left,
-        y: (touch ? touch.clientY : e.clientY) - rect.top,
+        x: (t ? t.clientX : e.clientX) - rect.left,
+        y: (t ? t.clientY : e.clientY) - rect.top,
       };
     };
 
     const down = () => (isDrawing = true);
     const up = () => {
       isDrawing = false;
-      checkScratch();
-    };
-
-    const move = (e) => {
-      if (!isDrawing) return;
-      const { x, y } = getPos(e);
-      scratch(x, y);
-    };
-
-    const checkScratch = () => {
       const data = ctx.getImageData(0, 0, width, height).data;
       let cleared = 0;
       for (let i = 3; i < data.length; i += 4) {
@@ -113,10 +127,15 @@ export default function PrizeScratchCard({
       }
     };
 
+    const move = (e) => {
+      if (!isDrawing) return;
+      const { x, y } = getPos(e);
+      scratch(x, y);
+    };
+
     canvas.addEventListener('mousedown', down);
     canvas.addEventListener('mouseup', up);
     canvas.addEventListener('mousemove', move);
-
     canvas.addEventListener('touchstart', down);
     canvas.addEventListener('touchend', up);
     canvas.addEventListener('touchmove', move);
@@ -141,7 +160,6 @@ export default function PrizeScratchCard({
           alt='Prize'
           style={{ width, height, borderRadius: 8 }}
         />
-
         <canvas
           ref={canvasRef}
           style={{
