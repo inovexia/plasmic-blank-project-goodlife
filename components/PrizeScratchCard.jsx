@@ -5,9 +5,10 @@ export default function PrizeScratchCard({
   height = 180,
   coverColor = '#B0B0B0',
 
-  // ⭐ NEW
   apiUrl,
   imageKey = 'file',
+
+  fallbackImage = 'https://picsum.photos/400/300',
 
   scratchThreshold = 60,
 
@@ -23,34 +24,50 @@ export default function PrizeScratchCard({
 }) {
   const canvasRef = useRef(null);
   const [showPopup, setShowPopup] = useState(false);
-
-  // ⭐ NEW: image state
   const [prizeImage, setPrizeImage] = useState(null);
+  const [error, setError] = useState(false);
 
-  // ⭐ NEW: fetch image from API
+  /* ✅ FETCH IMAGE SAFELY */
   useEffect(() => {
-    if (!apiUrl) return;
+    if (!apiUrl) {
+      setPrizeImage(fallbackImage);
+      return;
+    }
+
+    // Direct image API (no JSON)
+    if (!imageKey) {
+      setPrizeImage(apiUrl);
+      return;
+    }
 
     fetch(apiUrl)
-      .then((res) => res.json())
-      .then((data) => {
-        setPrizeImage(data[imageKey]);
+      .then((res) => {
+        if (!res.ok) throw new Error('API failed');
+        return res.json();
       })
-      .catch(console.error);
-  }, [apiUrl, imageKey]);
+      .then((data) => {
+        const img = data?.[imageKey];
+        if (!img) throw new Error('Invalid image key');
+        setPrizeImage(img);
+      })
+      .catch(() => {
+        console.warn('ScratchCard API failed, using fallback image');
+        setError(true);
+        setPrizeImage(fallbackImage);
+      });
+  }, [apiUrl, imageKey, fallbackImage]);
 
+  /* ✅ INIT SCRATCH ONLY WHEN IMAGE IS READY */
   useEffect(() => {
+    if (!prizeImage || !canvasRef.current) return;
+
     const canvas = canvasRef.current;
-    if (!canvas || !prizeImage) return;
+    const ctx = canvas.getContext('2d');
 
     canvas.width = width;
     canvas.height = height;
 
-    const ctx = canvas.getContext('2d');
-
     ctx.globalCompositeOperation = 'source-over';
-    ctx.clearRect(0, 0, width, height);
-
     ctx.fillStyle = coverColor;
     ctx.fillRect(0, 0, width, height);
 
@@ -64,6 +81,15 @@ export default function PrizeScratchCard({
       ctx.fill();
     };
 
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches?.[0];
+      return {
+        x: (touch ? touch.clientX : e.clientX) - rect.left,
+        y: (touch ? touch.clientY : e.clientY) - rect.top,
+      };
+    };
+
     const down = () => (isDrawing = true);
     const up = () => {
       isDrawing = false;
@@ -72,8 +98,8 @@ export default function PrizeScratchCard({
 
     const move = (e) => {
       if (!isDrawing) return;
-      const rect = canvas.getBoundingClientRect();
-      scratch(e.clientX - rect.left, e.clientY - rect.top);
+      const { x, y } = getPos(e);
+      scratch(x, y);
     };
 
     const checkScratch = () => {
@@ -82,22 +108,30 @@ export default function PrizeScratchCard({
       for (let i = 3; i < data.length; i += 4) {
         if (data[i] === 0) cleared++;
       }
-      const percent = (cleared / (width * height)) * 100;
-      if (percent > scratchThreshold) setShowPopup(true);
+      if ((cleared / (width * height)) * 100 > scratchThreshold) {
+        setShowPopup(true);
+      }
     };
 
     canvas.addEventListener('mousedown', down);
     canvas.addEventListener('mouseup', up);
     canvas.addEventListener('mousemove', move);
 
+    canvas.addEventListener('touchstart', down);
+    canvas.addEventListener('touchend', up);
+    canvas.addEventListener('touchmove', move);
+
     return () => {
       canvas.removeEventListener('mousedown', down);
       canvas.removeEventListener('mouseup', up);
       canvas.removeEventListener('mousemove', move);
+      canvas.removeEventListener('touchstart', down);
+      canvas.removeEventListener('touchend', up);
+      canvas.removeEventListener('touchmove', move);
     };
-  }, [width, height, coverColor, scratchThreshold, prizeImage]);
+  }, [prizeImage, width, height, coverColor, scratchThreshold]);
 
-  if (!prizeImage) return <p>Loading...</p>;
+  if (!prizeImage) return <p>Loading scratch card…</p>;
 
   return (
     <>
@@ -127,10 +161,8 @@ export default function PrizeScratchCard({
                 ✕
               </button>
             )}
-
             <h2>{popupTitle}</h2>
             <p>{popupMessage}</p>
-
             <a href={buttonLink} target='_blank' rel='noopener noreferrer'>
               <button
                 style={{

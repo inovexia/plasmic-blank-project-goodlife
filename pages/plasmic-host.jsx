@@ -46,6 +46,10 @@ PLASMIC.registerComponent(PrizeScratchCard, {
       displayName: 'Image Key',
       description: 'Key name from API response that contains image URL',
     },
+    fallbackImage: {
+      type: 'imageUrl',
+      displayName: 'Fallback Image',
+    },
 
     /* Scratch behavior */
     coverColor: {
