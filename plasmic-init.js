@@ -19,7 +19,5 @@ export const PLASMIC = initPlasmicLoader({
         '3CGl8KyHYi09ysM4VAefsb1gsBKDcgOiRBSkry7f99Dyr5Qazp4HGg8j0KfEQnUIVFf2n0lyp0d2E6VfldqQ',
     },
   ],
-  // Fetches the latest revisions, whether or not they were unpublished!
-  // Disable for production to ensure you render only published changes.
   preview: true,
 });
