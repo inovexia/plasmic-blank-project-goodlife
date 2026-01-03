@@ -24,26 +24,79 @@ PLASMIC.registerComponent(AlertBox, {
 PLASMIC.registerComponent(PrizeScratchCard, {
   name: 'Prize Scratch Card',
   props: {
-    width: { type: 'number', defaultValue: 300 },
-    height: { type: 'number', defaultValue: 300 },
+    /* Size */
+    width: {
+      type: 'number',
+      defaultValue: 300,
+    },
+    height: {
+      type: 'number',
+      defaultValue: 180,
+    },
 
-    prizeImage: { type: 'imageUrl' },
-    coverColor: { type: 'color', defaultValue: '#B0B0B0' },
-    scratchThreshold: { type: 'number', defaultValue: 60 },
+    /* ⭐ API CONFIG (NEW & IMPORTANT) */
+    apiUrl: {
+      type: 'string',
+      displayName: 'API URL',
+      description: 'Provide API URL for this project (dog / cat / cow)',
+    },
+    imageKey: {
+      type: 'string',
+      defaultValue: 'file',
+      displayName: 'Image Key',
+      description: 'Key name from API response that contains image URL',
+    },
 
-    popupTitle: { type: 'string', defaultValue: '🎉 Congratulations!' },
-    popupMessage: { type: 'string', defaultValue: 'You won a prize!' },
+    /* Scratch behavior */
+    coverColor: {
+      type: 'color',
+      defaultValue: '#B0B0B0',
+    },
+    scratchThreshold: {
+      type: 'number',
+      defaultValue: 60,
+    },
 
-    buttonText: { type: 'string', defaultValue: 'Claim Now' },
-    buttonLink: { type: 'href' },
+    /* Popup content */
+    popupTitle: {
+      type: 'string',
+      defaultValue: '🎉 Congratulations!',
+    },
+    popupMessage: {
+      type: 'string',
+      defaultValue: 'You won a special prize!',
+    },
 
-    buttonBgColor: { type: 'color', defaultValue: '#28a745' },
-    buttonTextColor: { type: 'color', defaultValue: '#ffffff' },
-    popupBgColor: { type: 'color', defaultValue: '#ffffff' },
+    /* Button */
+    buttonText: {
+      type: 'string',
+      defaultValue: 'Claim Now',
+    },
+    buttonLink: {
+      type: 'href',
+    },
 
-    showClose: { type: 'boolean', defaultValue: true },
+    buttonBgColor: {
+      type: 'color',
+      defaultValue: '#28a745',
+    },
+    buttonTextColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+    },
+
+    /* Popup */
+    popupBgColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+    },
+    showClose: {
+      type: 'boolean',
+      defaultValue: true,
+    },
   },
 });
+
 
 PLASMIC.registerComponent(QuizFlow, {
   name: 'QuizFlow',

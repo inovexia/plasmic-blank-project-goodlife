@@ -4,7 +4,11 @@ export default function PrizeScratchCard({
   width = 300,
   height = 180,
   coverColor = '#B0B0B0',
-  prizeImage,
+
+  // ⭐ NEW
+  apiUrl,
+  imageKey = 'file',
+
   scratchThreshold = 60,
 
   popupTitle = '🎉 Congratulations!',
@@ -20,9 +24,24 @@ export default function PrizeScratchCard({
   const canvasRef = useRef(null);
   const [showPopup, setShowPopup] = useState(false);
 
+  // ⭐ NEW: image state
+  const [prizeImage, setPrizeImage] = useState(null);
+
+  // ⭐ NEW: fetch image from API
+  useEffect(() => {
+    if (!apiUrl) return;
+
+    fetch(apiUrl)
+      .then((res) => res.json())
+      .then((data) => {
+        setPrizeImage(data[imageKey]);
+      })
+      .catch(console.error);
+  }, [apiUrl, imageKey]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !prizeImage) return;
 
     canvas.width = width;
     canvas.height = height;
@@ -76,7 +95,9 @@ export default function PrizeScratchCard({
       canvas.removeEventListener('mouseup', up);
       canvas.removeEventListener('mousemove', move);
     };
-  }, [width, height, coverColor, scratchThreshold]);
+  }, [width, height, coverColor, scratchThreshold, prizeImage]);
+
+  if (!prizeImage) return <p>Loading...</p>;
 
   return (
     <>
@@ -127,41 +148,3 @@ export default function PrizeScratchCard({
     </>
   );
 }
-
-/* Styles */
-const overlayStyle = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 9999,
-};
-
-const popupStyle = {
-  position: 'relative',
-  padding: 24,
-  borderRadius: 12,
-  textAlign: 'center',
-  width: 320,
-};
-
-const buttonStyle = {
-  marginTop: 16,
-  padding: '10px 20px',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: 16,
-};
-
-const closeStyle = {
-  position: 'absolute',
-  top: 10,
-  right: 10,
-  border: 'none',
-  background: 'transparent',
-  fontSize: 20,
-  cursor: 'pointer',
-};
