@@ -65,22 +65,23 @@ export default function PrizeScratchCard({
   const [prizeImage, setPrizeImage] = useState(null);
 
   /* ================== FETCH IMAGE ================== */
-  useEffect(() => {
-    if (!apiUrl) {
-      setPrizeImage(fallbackImage);
-      return;
-    }
+ useEffect(() => {
+   if (!apiUrl) {
+     setPrizeImage(fallbackImage);
+     return;
+   }
 
-    fetch(apiUrl)
-      .then((res) => res.json())
-      .then((data) => {
-        const img = data?.[imageKey];
-        setPrizeImage(img || fallbackImage);
-      })
-      .catch(() => {
-        setPrizeImage(fallbackImage);
-      });
-  }, [apiUrl, imageKey, fallbackImage]);
+   fetch(`/api/image-proxy?url=${encodeURIComponent(apiUrl)}`)
+     .then((res) => res.json())
+     .then((data) => {
+       const img = data?.[imageKey];
+       setPrizeImage(img || fallbackImage);
+     })
+     .catch(() => {
+       setPrizeImage(fallbackImage);
+     });
+ }, [apiUrl, imageKey, fallbackImage]);
+
 
   /* ================== SCRATCH LOGIC ================== */
   useEffect(() => {
