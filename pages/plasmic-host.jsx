@@ -109,6 +109,11 @@ PLASMIC.registerComponent(QuizFlow, {
       type: 'string',
       defaultValue: '/api/quiz',
     },
+    submitApiUrl: { type: 'string' },
+    redirectUrl: {
+      type: 'string',
+      displayName: 'Redirect URL after submit',
+    },
 
     questionColor: { type: 'color' },
     questionFontSize: { type: 'number' },
