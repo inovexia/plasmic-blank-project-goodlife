@@ -1,103 +1,128 @@
 'use client';
+import React, { useEffect, useState } from 'react';
 
-import React, { useState, useEffect } from 'react';
+/* Normalize API response */
+function normalizeQuiz(data) {
+  return data.questions.map((q) => {
+    const choiceObj = q.choices[0];
+    const options = Object.values(choiceObj).map((arr) => arr[0]);
+
+    return {
+      question: q.question,
+      options: options.map((o) => ({
+        label: o.choice,
+        isCorrect: o.isCorrect,
+        feedback: o.feedback,
+      })),
+    };
+  });
+}
 
 export default function QuizFlow({
-  questionColor = '#ffffff',
-  questionFontSize = 36,
+  apiUrl = '/api/quiz',
 
-  optionColor = '#ffffff',
+  questionColor = '#000',
+  questionFontSize = 32,
+  questionLineHeight = 1.3,
+
+  optionColor = '#333',
   optionFontSize = 18,
+  optionLineHeight = 1.4,
 
   correctColor = 'green',
   incorrectColor = 'red',
 
   buttonText = 'Next',
   buttonBg = '#0b4a8b',
-  buttonColor = '#ffffff',
+  buttonColor = '#fff',
+  buttonFontSize = 16,
 }) {
   const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
-  const [showFeedback, setShowFeedback] = useState(false);
   const [locked, setLocked] = useState(false);
 
   useEffect(() => {
-    fetch('/api/quiz')
+    fetch(apiUrl)
       .then((res) => res.json())
-      .then(setQuestions);
-  }, []);
+      .then((data) => {
+        setQuestions(normalizeQuiz(data));
+      });
+  }, [apiUrl]);
 
-  if (!questions.length) return null;
+  if (!questions.length) return <div>Loading quiz…</div>;
 
   const q = questions[current];
-  const isCorrect = selected === q.correctIndex;
+  const selectedOption = selected !== null ? q.options[selected] : null;
 
   return (
     <div>
       {/* Question */}
-      <h1
+      <h2
         style={{
           color: questionColor,
           fontSize: questionFontSize,
+          lineHeight: questionLineHeight,
         }}
       >
         {q.question}
-      </h1>
+      </h2>
 
       {/* Options */}
       {q.options.map((opt, i) => (
         <label key={i} style={{ display: 'block', margin: '12px 0' }}>
           <input
             type='radio'
-            name={`option-${current}`}
-            checked={selected === i}
+            name={`q-${current}`}
             disabled={locked}
+            checked={selected === i}
             onChange={() => {
               if (locked) return;
               setSelected(i);
-              setShowFeedback(true);
               setLocked(true);
             }}
           />
           <span
             style={{
+              marginLeft: 8,
               color: optionColor,
               fontSize: optionFontSize,
-              marginLeft: 8,
+              lineHeight: optionLineHeight,
             }}
           >
-            {opt}
+            {opt.label}
           </span>
         </label>
       ))}
 
       {/* Feedback */}
-      {showFeedback && (
-        <p style={{ color: isCorrect ? correctColor : incorrectColor }}>
-          {isCorrect ? q.correctFeedback : q.incorrectFeedback}
+      {selectedOption && (
+        <p
+          style={{
+            color: selectedOption.isCorrect ? correctColor : incorrectColor,
+          }}
+        >
+          {selectedOption.feedback}
         </p>
       )}
 
       {/* Next Button */}
-      {showFeedback && (
+      {selectedOption && current < questions.length - 1 && (
         <button
           style={{
+            marginTop: 20,
             background: buttonBg,
             color: buttonColor,
+            fontSize: buttonFontSize,
             padding: '12px 24px',
-            marginTop: 20,
             border: 'none',
             cursor: 'pointer',
-            opacity: current === questions.length - 1 ? 0.6 : 1,
           }}
           onClick={() => {
             setSelected(null);
-            setShowFeedback(false);
             setLocked(false);
-            setCurrent((prev) => prev + 1);
+            setCurrent((c) => c + 1);
           }}
-          disabled={current === questions.length - 1}
         >
           {buttonText}
         </button>

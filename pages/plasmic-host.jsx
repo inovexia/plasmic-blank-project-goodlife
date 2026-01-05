@@ -5,7 +5,7 @@ import AlertBox from '../components/AlertBox';
 import PrizeScratchCard from '../components/PrizeScratchCard';
 import QuizFlow from '../components/QuizFlow';
 
-// ✅ Register WITHOUT meta.importPath
+//Register WITHOUT meta.importPath
 PLASMIC.registerComponent(AlertBox, {
   name: 'AlertBox',
   props: {
@@ -34,7 +34,7 @@ PLASMIC.registerComponent(PrizeScratchCard, {
       defaultValue: 180,
     },
 
-    /* ⭐ API CONFIG (NEW & IMPORTANT) */
+    /* API CONFIG (NEW & IMPORTANT) */
     apiUrl: {
       type: 'string',
       displayName: 'API URL',
@@ -103,47 +103,28 @@ PLASMIC.registerComponent(PrizeScratchCard, {
 
 
 PLASMIC.registerComponent(QuizFlow, {
-  name: 'QuizFlow',
+  name: 'Quiz Flow',
   props: {
-    questionColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-    },
-    questionFontSize: {
-      type: 'number',
-      defaultValue: 36,
-    },
-
-    optionColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-    },
-    optionFontSize: {
-      type: 'number',
-      defaultValue: 18,
-    },
-
-    correctColor: {
-      type: 'color',
-      defaultValue: 'green',
-    },
-    incorrectColor: {
-      type: 'color',
-      defaultValue: 'red',
-    },
-
-    buttonText: {
+    apiUrl: {
       type: 'string',
-      defaultValue: 'Next',
+      defaultValue: '/api/quiz',
     },
-    buttonBg: {
-      type: 'color',
-      defaultValue: '#0b4a8b',
-    },
-    buttonColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-    },
+
+    questionColor: { type: 'color' },
+    questionFontSize: { type: 'number' },
+    questionLineHeight: { type: 'number' },
+
+    optionColor: { type: 'color' },
+    optionFontSize: { type: 'number' },
+    optionLineHeight: { type: 'number' },
+
+    correctColor: { type: 'color' },
+    incorrectColor: { type: 'color' },
+
+    buttonText: { type: 'string' },
+    buttonBg: { type: 'color' },
+    buttonColor: { type: 'color' },
+    buttonFontSize: { type: 'number' },
   },
 });
 
