@@ -4,6 +4,7 @@ import { PLASMIC } from '@/plasmic-init';
 import AlertBox from '../components/AlertBox';
 import PrizeScratchCard from '../components/PrizeScratchCard';
 import QuizFlow from '../components/QuizFlow';
+import PlasmicRecaptcha from '../components/PlasmicRecaptcha';
 
 //Register WITHOUT meta.importPath
 PLASMIC.registerComponent(AlertBox, {
@@ -130,6 +131,29 @@ PLASMIC.registerComponent(QuizFlow, {
     buttonBg: { type: 'color' },
     buttonColor: { type: 'color' },
     buttonFontSize: { type: 'number' },
+  },
+});
+
+PLASMIC.registerComponent(PlasmicRecaptcha, {
+  name: 'Google Recaptcha',
+  props: {
+    siteKey: {
+      type: 'string',
+      defaultValue: '',
+      description: 'Google reCAPTCHA site key',
+    },
+    enabled: {
+      type: 'boolean',
+      defaultValue: true,
+    },
+    fallbackEnabled: {
+      type: 'boolean',
+      defaultValue: true,
+    },
+    onVerify: {
+      type: 'eventHandler',
+      argTypes: [{ name: 'success', type: 'boolean' }],
+    },
   },
 });
 
