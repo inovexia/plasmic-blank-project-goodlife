@@ -1,5 +1,44 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReCAPTCHA from 'react-google-recaptcha';
+
+function generateText(length = 5) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from(
+    { length },
+    () => chars[Math.floor(Math.random() * chars.length)]
+  ).join('');
+}
+
+function drawCaptcha(canvas, text) {
+  const ctx = canvas.getContext('2d');
+  const { width, height } = canvas;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#f5f5f5';
+  ctx.fillRect(0, 0, width, height);
+
+  // noise dots
+  for (let i = 0; i < 80; i++) {
+    ctx.fillStyle = `rgba(0,0,0,${Math.random()})`;
+    ctx.fillRect(Math.random() * width, Math.random() * height, 1, 1);
+  }
+
+  // text
+  ctx.font = '26px Arial';
+  ctx.fillStyle = '#555';
+  ctx.setTransform(1, 0.1, -0.1, 1, 0, 0);
+  ctx.fillText(text, 20, 35);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // lines
+  for (let i = 0; i < 3; i++) {
+    ctx.strokeStyle = '#999';
+    ctx.beginPath();
+    ctx.moveTo(Math.random() * width, Math.random() * height);
+    ctx.lineTo(Math.random() * width, Math.random() * height);
+    ctx.stroke();
+  }
+}
 
 export default function PlasmicRecaptcha({
   siteKey,
@@ -7,66 +46,85 @@ export default function PlasmicRecaptcha({
   fallbackEnabled = true,
   onVerify,
 }) {
-  const [fallbackValue] = useState(
-    Math.floor(1000 + Math.random() * 9000).toString()
-  );
-  const [userInput, setUserInput] = useState('');
-  const [status, setStatus] = useState('idle');
-  // idle | success | error
+  const canvasRef = useRef(null);
+  const [captcha, setCaptcha] = useState(generateText());
+  const [input, setInput] = useState('');
+  const [status, setStatus] = useState('idle'); // idle | success | error
 
-  const handleCaptcha = async (token) => {
-    try {
-      const res = await fetch('/api/verify-captcha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
-
-      const data = await res.json();
-      setStatus(data.success ? 'success' : 'error');
-      onVerify?.(data.success);
-    } catch {
-      setStatus('error');
-      onVerify?.(false);
+  useEffect(() => {
+    if (canvasRef.current) {
+      drawCaptcha(canvasRef.current, captcha);
     }
+  }, [captcha]);
+
+  const refresh = () => {
+    setCaptcha(generateText());
+    setInput('');
+    setStatus('idle');
+    onVerify?.(false);
   };
 
-  // 🚨 Fallback if no site key
+  const verifyFallback = () => {
+    const ok = input.toUpperCase() === captcha;
+    setStatus(ok ? 'success' : 'error');
+    onVerify?.(ok);
+  };
+
+  const handleCaptcha = async (token) => {
+    const res = await fetch('/api/verify-captcha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    onVerify?.(data.success);
+  };
+
+  // 🔹 FALLBACK CAPTCHA
   if (!enabled || !siteKey) {
     if (!fallbackEnabled) return null;
 
-    const verifyFallback = () => {
-      const isValid = userInput === fallbackValue;
-      setStatus(isValid ? 'success' : 'error');
-      onVerify?.(isValid);
-    };
-
     return (
-      <div style={{ maxWidth: 260 }}>
-        <p>
-          Enter the number:{' '}
-          <strong style={{ letterSpacing: 2 }}>{fallbackValue}</strong>
-        </p>
+      <div style={{ maxWidth: 300 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: 6,
+          }}
+        >
+          <canvas
+            ref={canvasRef}
+            width={180}
+            height={50}
+            style={{ border: '1px solid #ccc' }}
+          />
+
+          <button onClick={refresh} title='Refresh'>
+            🔄
+          </button>
+
+          <button disabled title='Audio (optional)'>
+            🔊
+          </button>
+        </div>
 
         <input
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder='Enter text'
           style={{
             width: '100%',
             padding: 6,
-            marginBottom: 6,
-            border: '1px solid #ccc',
             borderRadius: 4,
+            border: '1px solid #ccc',
           }}
         />
 
         <button
           onClick={verifyFallback}
-          style={{
-            width: '100%',
-            padding: 6,
-            cursor: 'pointer',
-          }}
+          style={{ width: '100%', marginTop: 6 }}
         >
           Verify
         </button>
@@ -76,11 +134,12 @@ export default function PlasmicRecaptcha({
         )}
 
         {status === 'error' && (
-          <div style={{ color: 'red', marginTop: 6 }}>✖ Incorrect code</div>
+          <div style={{ color: 'red', marginTop: 6 }}>✖ Incorrect captcha</div>
         )}
       </div>
     );
   }
 
+  // 🔹 GOOGLE reCAPTCHA
   return <ReCAPTCHA sitekey={siteKey} onChange={handleCaptcha} />;
 }
