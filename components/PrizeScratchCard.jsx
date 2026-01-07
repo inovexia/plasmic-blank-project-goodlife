@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { PLASMIC } from '../plasmic-init';
 
 /* ================== STYLES (FIXED) ================== */
 const overlayStyle = {
@@ -199,3 +200,83 @@ export default function PrizeScratchCard({
     </>
   );
 }
+
+PLASMIC.registerComponent(PrizeScratchCard, {
+  name: 'Prize Scratch Card',
+  props: {
+    /* Size */
+    width: {
+      type: 'number',
+      defaultValue: 300,
+    },
+    height: {
+      type: 'number',
+      defaultValue: 180,
+    },
+
+    /* API CONFIG (NEW & IMPORTANT) */
+    apiUrl: {
+      type: 'string',
+      displayName: 'API URL',
+      description: 'Provide API URL for this project (dog / cat / cow)',
+    },
+    imageKey: {
+      type: 'string',
+      defaultValue: 'file',
+      displayName: 'Image Key',
+      description: 'Key name from API response that contains image URL',
+    },
+    fallbackImage: {
+      type: 'imageUrl',
+      displayName: 'Fallback Image',
+    },
+
+    /* Scratch behavior */
+    coverColor: {
+      type: 'color',
+      defaultValue: '#B0B0B0',
+    },
+    scratchThreshold: {
+      type: 'number',
+      defaultValue: 60,
+    },
+
+    /* Popup content */
+    popupTitle: {
+      type: 'string',
+      defaultValue: '🎉 Congratulations!',
+    },
+    popupMessage: {
+      type: 'string',
+      defaultValue: 'You won a special prize!',
+    },
+
+    /* Button */
+    buttonText: {
+      type: 'string',
+      defaultValue: 'Claim Now',
+    },
+    buttonLink: {
+      type: 'href',
+    },
+
+    buttonBgColor: {
+      type: 'color',
+      defaultValue: '#28a745',
+    },
+    buttonTextColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+    },
+
+    /* Popup */
+    popupBgColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+    },
+    showClose: {
+      type: 'boolean',
+      defaultValue: true,
+    },
+  },
+});

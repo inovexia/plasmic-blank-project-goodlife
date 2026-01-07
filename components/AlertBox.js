@@ -1,4 +1,5 @@
 import React from 'react';
+import { PLASMIC } from '../plasmic-init';
 
 export default function AlertBox(props) {
   const {
@@ -20,3 +21,18 @@ export default function AlertBox(props) {
     </div>
   );
 }
+
+PLASMIC.registerComponent(AlertBox, {
+  name: 'AlertBox',
+  props: {
+    message: {
+      type: 'string',
+      defaultValue: 'Alert message',
+    },
+    type: {
+      type: 'choice',
+      options: ['success', 'warning', 'error'],
+      defaultValue: 'success',
+    },
+  },
+});

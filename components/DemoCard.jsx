@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { PLASMIC } from '../plasmic-init';
 
 export default function DemoCard({ rewardText }) {
   const canvasRef = useRef(null);

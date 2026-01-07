@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { PLASMIC } from '../plasmic-init';
 
 /* Normalize API response */
 function normalizeQuiz(data) {
@@ -166,3 +167,34 @@ export default function QuizFlow({
     </div>
   );
 }
+
+PLASMIC.registerComponent(QuizFlow, {
+  name: 'Quiz Flow',
+  props: {
+    apiUrl: {
+      type: 'string',
+      defaultValue: '/api/quiz',
+    },
+    submitApiUrl: { type: 'string' },
+    redirectUrl: {
+      type: 'string',
+      displayName: 'Redirect URL after submit',
+    },
+
+    questionColor: { type: 'color' },
+    questionFontSize: { type: 'number' },
+    questionLineHeight: { type: 'number' },
+
+    optionColor: { type: 'color' },
+    optionFontSize: { type: 'number' },
+    optionLineHeight: { type: 'number' },
+
+    correctColor: { type: 'color' },
+    incorrectColor: { type: 'color' },
+
+    buttonText: { type: 'string' },
+    buttonBg: { type: 'color' },
+    buttonColor: { type: 'color' },
+    buttonFontSize: { type: 'number' },
+  },
+});

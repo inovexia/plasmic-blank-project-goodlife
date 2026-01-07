@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReCAPTCHA from 'react-google-recaptcha';
+import { PLASMIC } from '../plasmic-init';
 
 function generateText(length = 5) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -80,7 +81,7 @@ export default function PlasmicRecaptcha({
     onVerify?.(data.success);
   };
 
-  // 🔹 FALLBACK CAPTCHA
+  //FALLBACK CAPTCHA
   if (!enabled || !siteKey) {
     if (!fallbackEnabled) return null;
 
@@ -103,10 +104,6 @@ export default function PlasmicRecaptcha({
 
           <button onClick={refresh} title='Refresh'>
             🔄
-          </button>
-
-          <button disabled title='Audio (optional)'>
-            🔊
           </button>
         </div>
 
@@ -143,3 +140,26 @@ export default function PlasmicRecaptcha({
   // 🔹 GOOGLE reCAPTCHA
   return <ReCAPTCHA sitekey={siteKey} onChange={handleCaptcha} />;
 }
+
+PLASMIC.registerComponent(PlasmicRecaptcha, {
+  name: 'Google Recaptcha',
+  props: {
+    siteKey: {
+      type: 'string',
+      defaultValue: '',
+      description: 'Google reCAPTCHA site key',
+    },
+    enabled: {
+      type: 'boolean',
+      defaultValue: true,
+    },
+    fallbackEnabled: {
+      type: 'boolean',
+      defaultValue: true,
+    },
+    onVerify: {
+      type: 'eventHandler',
+      argTypes: [{ name: 'success', type: 'boolean' }],
+    },
+  },
+});
