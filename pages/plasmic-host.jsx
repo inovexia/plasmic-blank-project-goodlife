@@ -1,5 +1,6 @@
-import '../components/plasmic-register';
+import { PlasmicCanvasHost } from '@plasmicapp/loader-nextjs';
+import '@/components/plasmic-register';
 
 export default function PlasmicHost() {
-  return null;
+  return <PlasmicCanvasHost />;
 }
