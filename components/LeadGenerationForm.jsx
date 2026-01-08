@@ -8,24 +8,29 @@ function LeadGenerationForm({
   submitText = 'Submit',
 
   padding = '40px',
-  textColor = '#ffffff',
+  textColor = '#fff',
 
   fieldGap = 16,
 
-  labelColor = '#ffffff',
+  labelColor = '#fff',
   labelFontSize = 14,
 
   inputHeight = 38,
   inputPadding = '6px 10px',
   inputRadius = 2,
 
-  buttonTextColor = '#ffffff',
-  buttonBorderColor = '#ffffff',
+  buttonTextColor = '#fff',
+  buttonBorderColor = '#fff',
   buttonPadding = '8px 28px',
-  buttonAlign = 'center',
+  buttonAlign = 'left', // left | center | right
+
+  errorMessage = 'Something wrong with form data!',
 }) {
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(null);
+  const [formError, setFormError] = useState(false);
+
   const [values, setValues] = useState({});
   const [errors, setErrors] = useState({});
 
@@ -34,17 +39,37 @@ function LeadGenerationForm({
   useEffect(() => {
     if (!mounted || !formHandle) return;
 
+    setLoading(true);
+    setForm(null);
+    setFormError(false);
+
     fetch('https://dev.imgen3.dev1.co.in/api/forms')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('API failed');
+        return r.json();
+      })
       .then((json) => {
-        const selected = json.data.find((f) => f.handle === formHandle);
-        setForm(selected || null);
+        const selected = json?.data?.find((f) => f.handle === formHandle);
+
+        if (
+          !selected ||
+          !selected.fields ||
+          Object.keys(selected.fields).length === 0
+        ) {
+          setFormError(true);
+          setLoading(false);
+          return;
+        }
+
+        setForm(selected);
+        setLoading(false);
+      })
+      .catch(() => {
+        setFormError(true);
+        setLoading(false);
       });
   }, [mounted, formHandle]);
 
-  if (!mounted || !form) return null;
-
-  // ---------------- VALIDATION ----------------
   function validate() {
     const errs = {};
 
@@ -82,7 +107,31 @@ function LeadGenerationForm({
     });
   }
 
-  const buttonAlignmentMap = {
+  // ⏳ Loading (do nothing)
+  if (loading) return null;
+
+  // ❌ Error state
+  if (formError) {
+    return (
+      <section style={{ padding, color: textColor }}>
+        <div
+          style={{
+            maxWidth: 900,
+            margin: 'auto',
+            textAlign: 'center',
+            color: '#ffdddd',
+            fontSize: 16,
+          }}
+        >
+          {errorMessage}
+        </div>
+      </section>
+    );
+  }
+
+  if (!form) return null;
+
+  const justifyMap = {
     left: 'flex-start',
     center: 'center',
     right: 'flex-end',
@@ -139,7 +188,6 @@ function LeadGenerationForm({
                         borderRadius: inputRadius,
                         border: 'none',
                         outline: 'none',
-                        boxShadow: 'none',
                       }}
                     />
                   </>
@@ -163,11 +211,7 @@ function LeadGenerationForm({
                           [field.handle]: e.target.checked,
                         })
                       }
-                      style={{
-                        marginTop: 4,
-                        outline: 'none',
-                        boxShadow: 'none',
-                      }}
+                      style={{ marginTop: 4 }}
                     />
                     <span>{field.instructions || field.display}</span>
                   </label>
@@ -189,24 +233,23 @@ function LeadGenerationForm({
           })}
         </div>
 
-        {/* SUBMIT BUTTON */}
+        {/* BUTTON */}
         <div
           style={{
             display: 'flex',
-            justifyContent: buttonAlignmentMap[buttonAlign],
-            marginTop: 24,
+            justifyContent: justifyMap[buttonAlign],
           }}
         >
           <button
             type='submit'
             style={{
+              marginTop: 24,
               background: 'transparent',
               color: buttonTextColor,
               border: `1px solid ${buttonBorderColor}`,
               padding: buttonPadding,
               cursor: 'pointer',
               outline: 'none',
-              boxShadow: 'none',
             }}
           >
             {submitText}
@@ -214,16 +257,14 @@ function LeadGenerationForm({
         </div>
       </form>
 
-      {/* GLOBAL FORM RESET (focus-visible, active, focus) */}
+      {/* RESPONSIVE + REMOVE FOCUS */}
       <style jsx>{`
         input:focus,
         input:focus-visible,
-        input:active,
         button:focus,
-        button:focus-visible,
-        button:active {
-          outline: none !important;
-          box-shadow: none !important;
+        button:focus-visible {
+          outline: none;
+          box-shadow: none;
         }
 
         @media (max-width: 768px) {
@@ -236,6 +277,7 @@ function LeadGenerationForm({
   );
 }
 
+/* 🔌 PLASMIC REGISTRATION */
 PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
   props: {
@@ -257,12 +299,15 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     buttonTextColor: { type: 'color', defaultValue: '#ffffff' },
     buttonBorderColor: { type: 'color', defaultValue: '#ffffff' },
     buttonPadding: { type: 'string', defaultValue: '8px 28px' },
-
     buttonAlign: {
       type: 'choice',
       options: ['left', 'center', 'right'],
-      defaultValue: 'center',
-      displayName: 'Button Alignment',
+      defaultValue: 'left',
+    },
+
+    errorMessage: {
+      type: 'string',
+      defaultValue: 'Something wrong with form data!',
     },
   },
 });
