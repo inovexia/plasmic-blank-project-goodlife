@@ -3,145 +3,268 @@
 import { useEffect, useState } from 'react';
 import { PLASMIC } from '../plasmic-init';
 
-export default function LeadGenerationForm({
+function LeadGenerationForm({
   formHandle,
   submitText = 'Submit',
+
+  padding = '40px',
+  textColor = '#ffffff',
+
+  fieldGap = 16,
+
+  labelColor = '#ffffff',
+  labelFontSize = 14,
+
+  inputHeight = 38,
+  inputPadding = '6px 10px',
+  inputRadius = 2,
+
+  buttonTextColor = '#ffffff',
+  buttonBorderColor = '#ffffff',
+  buttonPadding = '8px 28px',
+  buttonAlign = 'center',
 }) {
+  const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState(null);
   const [values, setValues] = useState({});
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(true);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    async function loadForm() {
-      setLoading(true);
-      const res = await fetch('https://dev.imgen3.dev1.co.in/api/forms');
-      const json = await res.json();
+    if (!mounted || !formHandle) return;
 
-      const selected = json.data.find((f) => f.handle === formHandle);
+    fetch('https://dev.imgen3.dev1.co.in/api/forms')
+      .then((r) => r.json())
+      .then((json) => {
+        const selected = json.data.find((f) => f.handle === formHandle);
+        setForm(selected || null);
+      });
+  }, [mounted, formHandle]);
 
-      setForm(selected || null);
-      setLoading(false);
-    }
+  if (!mounted || !form) return null;
 
-    if (formHandle) loadForm();
-  }, [formHandle]);
-
-  if (loading) return <p>Loading form…</p>;
-  if (!form) return <p>Form not found</p>;
-
-  // ---------------- Validation ----------------
+  // ---------------- VALIDATION ----------------
   function validate() {
-    const newErrors = {};
+    const errs = {};
 
     Object.values(form.fields).forEach((field) => {
       const value = values[field.handle];
+      const rules = field.validate || [];
 
-      if (field.validate?.includes('required') && !value) {
-        newErrors[field.handle] = 'Required';
+      if (rules.includes('required')) {
+        if (field.type === 'checkboxes' ? !value : !value?.trim()) {
+          errs[field.handle] = 'Required';
+        }
       }
 
       if (
-        field.validate?.includes('email') &&
+        rules.includes('email') &&
         value &&
-        !/^\S+@\S+\.\S+$/.test(value)
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
       ) {
-        newErrors[field.handle] = 'Invalid email';
+        errs[field.handle] = 'Invalid email';
       }
     });
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   }
 
-  // ---------------- Submit ----------------
-  async function onSubmit(e) {
+  function onSubmit(e) {
     e.preventDefault();
     if (!validate()) return;
 
-    await fetch(form.api_url, {
+    fetch(form.api_url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(values),
     });
-
-    alert('Form submitted');
   }
 
-  // ---------------- Render ----------------
+  const buttonAlignmentMap = {
+    left: 'flex-start',
+    center: 'center',
+    right: 'flex-end',
+  };
+
   return (
-    <form onSubmit={onSubmit} className='lead-form'>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-        {Object.values(form.fields).map((field) => {
-          const width = field.width === 50 ? '50%' : '100%';
+    <section style={{ padding, color: textColor }}>
+      <form style={{ maxWidth: 900, margin: 'auto' }} onSubmit={onSubmit}>
+        {/* GRID */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(12, 1fr)',
+            gap: fieldGap,
+          }}
+        >
+          {Object.values(form.fields).map((field) => {
+            const colSpan = field.width === 50 ? 'span 6' : 'span 12';
+            const isCheckbox = field.type === 'checkboxes';
 
-          return (
-            <div key={field.handle} style={{ width }}>
-              {field.type !== 'checkboxes' && (
-                <>
-                  <label>
-                    {field.display}
-                    {field.validate?.includes('required') && ' *'}
+            return (
+              <div key={field.handle} style={{ gridColumn: colSpan }}>
+                {!isCheckbox ? (
+                  <>
+                    <label
+                      style={{
+                        display: 'block',
+                        marginBottom: 6,
+                        color: labelColor,
+                        fontSize: labelFontSize,
+                      }}
+                    >
+                      {field.display}
+                      {field.validate?.includes('required') && (
+                        <span style={{ color: 'red' }}> *</span>
+                      )}
+                    </label>
+
+                    <input
+                      type={
+                        field.validate?.includes('email') ? 'email' : 'text'
+                      }
+                      value={values[field.handle] || ''}
+                      onChange={(e) =>
+                        setValues({
+                          ...values,
+                          [field.handle]: e.target.value,
+                        })
+                      }
+                      style={{
+                        width: '100%',
+                        height: inputHeight,
+                        padding: inputPadding,
+                        borderRadius: inputRadius,
+                        border: 'none',
+                        outline: 'none',
+                        boxShadow: 'none',
+                      }}
+                    />
+                  </>
+                ) : (
+                  <label
+                    style={{
+                      display: 'flex',
+                      gap: 10,
+                      fontSize: labelFontSize,
+                      color: labelColor,
+                      lineHeight: 1.4,
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <input
+                      type='checkbox'
+                      checked={!!values[field.handle]}
+                      onChange={(e) =>
+                        setValues({
+                          ...values,
+                          [field.handle]: e.target.checked,
+                        })
+                      }
+                      style={{
+                        marginTop: 4,
+                        outline: 'none',
+                        boxShadow: 'none',
+                      }}
+                    />
+                    <span>{field.instructions || field.display}</span>
                   </label>
+                )}
 
-                  <input
-                    type='text'
-                    value={values[field.handle] || ''}
-                    onChange={(e) =>
-                      setValues({
-                        ...values,
-                        [field.handle]: e.target.value,
-                      })
-                    }
-                  />
-                </>
-              )}
+                {errors[field.handle] && (
+                  <div
+                    style={{
+                      color: '#ffdddd',
+                      fontSize: 12,
+                      marginTop: 4,
+                    }}
+                  >
+                    {errors[field.handle]}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
-              {field.type === 'checkboxes' && (
-                <label>
-                  <input
-                    type='checkbox'
-                    checked={!!values[field.handle]}
-                    onChange={(e) =>
-                      setValues({
-                        ...values,
-                        [field.handle]: e.target.checked,
-                      })
-                    }
-                  />
-                  {field.instructions || field.display}
-                </label>
-              )}
+        {/* SUBMIT BUTTON */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: buttonAlignmentMap[buttonAlign],
+            marginTop: 24,
+          }}
+        >
+          <button
+            type='submit'
+            style={{
+              background: 'transparent',
+              color: buttonTextColor,
+              border: `1px solid ${buttonBorderColor}`,
+              padding: buttonPadding,
+              cursor: 'pointer',
+              outline: 'none',
+              boxShadow: 'none',
+            }}
+          >
+            {submitText}
+          </button>
+        </div>
+      </form>
 
-              {errors[field.handle] && (
-                <div style={{ color: 'red', fontSize: 12 }}>
-                  {errors[field.handle]}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {/* GLOBAL FORM RESET (focus-visible, active, focus) */}
+      <style jsx>{`
+        input:focus,
+        input:focus-visible,
+        input:active,
+        button:focus,
+        button:focus-visible,
+        button:active {
+          outline: none !important;
+          box-shadow: none !important;
+        }
 
-      <button type='submit'>{submitText}</button>
-    </form>
+        @media (max-width: 768px) {
+          div[style*='grid-column: span 6'] {
+            grid-column: span 12 !important;
+          }
+        }
+      `}</style>
+    </section>
   );
 }
 
-
-// Register this component
-
-PLASMIC.registerComponent(require('./LeadGenerationForm').default, {
+PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
   props: {
-    formHandle: {
-      type: 'string',
-      displayName: 'Form Handle',
-      defaultValue: 'toronto_water_front',
-    },
-    submitText: {
-      type: 'string',
-      defaultValue: 'Submit',
+    formHandle: { type: 'string', defaultValue: 'toronto_water_front' },
+    submitText: { type: 'string', defaultValue: 'Submit' },
+
+    padding: { type: 'string', defaultValue: '40px' },
+    textColor: { type: 'color', defaultValue: '#ffffff' },
+
+    fieldGap: { type: 'number', defaultValue: 16 },
+
+    labelColor: { type: 'color', defaultValue: '#ffffff' },
+    labelFontSize: { type: 'number', defaultValue: 14 },
+
+    inputHeight: { type: 'number', defaultValue: 38 },
+    inputPadding: { type: 'string', defaultValue: '6px 10px' },
+    inputRadius: { type: 'number', defaultValue: 2 },
+
+    buttonTextColor: { type: 'color', defaultValue: '#ffffff' },
+    buttonBorderColor: { type: 'color', defaultValue: '#ffffff' },
+    buttonPadding: { type: 'string', defaultValue: '8px 28px' },
+
+    buttonAlign: {
+      type: 'choice',
+      options: ['left', 'center', 'right'],
+      defaultValue: 'center',
+      displayName: 'Button Alignment',
     },
   },
 });
+
+export default LeadGenerationForm;
