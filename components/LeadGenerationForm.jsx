@@ -23,32 +23,50 @@ function LeadGenerationForm({
   buttonBorderColor = '#ffffff',
   buttonPadding = '8px 28px',
   buttonAlign = 'center',
+
+  errorMessage = 'Something wrong with form data!',
+  successMessage = 'Form submitted successfully!',
 }) {
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState(null);
   const [values, setValues] = useState({});
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
 
   useEffect(() => setMounted(true), []);
 
+  // ---------------- LOAD FORM ----------------
   useEffect(() => {
     if (!mounted || !formHandle) return;
 
-    fetch('https://dev.imgen3.dev1.co.in/api/forms')
+    setForm(null);
+    setFormError('');
+    setSuccess('');
+
+    fetch('https://dev.imgen3.dev1.co.in/api/forms') // keep loading form metadata from external API
       .then((r) => r.json())
       .then((json) => {
-        const selected = json.data.find((f) => f.handle === formHandle);
-        setForm(selected || null);
-      });
-  }, [mounted, formHandle]);
+        const selected = json?.data?.find((f) => f.handle === formHandle);
 
-  if (!mounted || !form) return null;
+        if (!selected) {
+          setFormError(errorMessage);
+          return;
+        }
+
+        setForm(selected);
+      })
+      .catch(() => {
+        setFormError(errorMessage);
+      });
+  }, [mounted, formHandle, errorMessage]);
 
   // ---------------- VALIDATION ----------------
   function validate() {
     const errs = {};
 
-    Object.values(form.fields).forEach((field) => {
+    Object.values(form.fields || {}).forEach((field) => {
       const value = values[field.handle];
       const rules = field.validate || [];
 
@@ -71,15 +89,35 @@ function LeadGenerationForm({
     return Object.keys(errs).length === 0;
   }
 
-  function onSubmit(e) {
+  // ---------------- SUBMIT ----------------
+  async function onSubmit(e) {
     e.preventDefault();
+    setSuccess('');
+    setFormError('');
+
     if (!validate()) return;
 
-    fetch(form.api_url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    });
+    setLoading(true);
+
+    try {
+      // Submit via your Next.js API route to avoid CORS
+      const res = await fetch('/api/lead-submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formHandle, values }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data?.error || 'Submit failed');
+
+      setSuccess(successMessage);
+      setValues({});
+    } catch (err) {
+      setFormError(err.message || 'Form submission failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const buttonAlignmentMap = {
@@ -88,9 +126,23 @@ function LeadGenerationForm({
     right: 'flex-end',
   };
 
+  if (!mounted) return null;
+
+  if (formError && !form) {
+    return (
+      <section style={{ padding, color: textColor }}>
+        <div style={{ margin: 'auto', color: 'red' }}>
+          {formError}
+        </div>
+      </section>
+    );
+  }
+
+  if (!form) return null;
+
   return (
     <section style={{ padding, color: textColor }}>
-      <form style={{ maxWidth: 900, margin: 'auto' }} onSubmit={onSubmit}>
+      <form style={{ margin: 'auto' }} onSubmit={onSubmit}>
         {/* GRID */}
         <div
           style={{
@@ -150,7 +202,6 @@ function LeadGenerationForm({
                       gap: 10,
                       fontSize: labelFontSize,
                       color: labelColor,
-                      lineHeight: 1.4,
                       alignItems: 'flex-start',
                     }}
                   >
@@ -163,24 +214,13 @@ function LeadGenerationForm({
                           [field.handle]: e.target.checked,
                         })
                       }
-                      style={{
-                        marginTop: 4,
-                        outline: 'none',
-                        boxShadow: 'none',
-                      }}
                     />
                     <span>{field.instructions || field.display}</span>
                   </label>
                 )}
 
                 {errors[field.handle] && (
-                  <div
-                    style={{
-                      color: '#ffdddd',
-                      fontSize: 12,
-                      marginTop: 4,
-                    }}
-                  >
+                  <div style={{ color: '#ffdddd', fontSize: 12 }}>
                     {errors[field.handle]}
                   </div>
                 )}
@@ -189,7 +229,7 @@ function LeadGenerationForm({
           })}
         </div>
 
-        {/* SUBMIT BUTTON */}
+        {/* SUBMIT */}
         <div
           style={{
             display: 'flex',
@@ -199,22 +239,24 @@ function LeadGenerationForm({
         >
           <button
             type='submit'
+            disabled={loading}
             style={{
               background: 'transparent',
               color: buttonTextColor,
               border: `1px solid ${buttonBorderColor}`,
               padding: buttonPadding,
-              cursor: 'pointer',
-              outline: 'none',
-              boxShadow: 'none',
+              cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
-            {submitText}
+            {loading ? 'Submitting…' : submitText}
           </button>
         </div>
+
+        {success && (
+          <div style={{ marginTop: 16, color: '#aaffaa' }}>{success}</div>
+        )}
       </form>
 
-      {/* GLOBAL FORM RESET (focus-visible, active, focus) */}
       <style jsx>{`
         input:focus,
         input:focus-visible,
@@ -242,6 +284,15 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     formHandle: { type: 'string', defaultValue: 'toronto_water_front' },
     submitText: { type: 'string', defaultValue: 'Submit' },
 
+    errorMessage: {
+      type: 'string',
+      defaultValue: 'Something wrong with form data!',
+    },
+    successMessage: {
+      type: 'string',
+      defaultValue: 'Form submitted successfully!',
+    },
+
     padding: { type: 'string', defaultValue: '40px' },
     textColor: { type: 'color', defaultValue: '#ffffff' },
 
@@ -262,7 +313,6 @@ PLASMIC.registerComponent(LeadGenerationForm, {
       type: 'choice',
       options: ['left', 'center', 'right'],
       defaultValue: 'center',
-      displayName: 'Button Alignment',
     },
   },
 });
