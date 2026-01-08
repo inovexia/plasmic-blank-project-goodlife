@@ -4,3 +4,4 @@ import './PlasmicRecaptcha';
 import './PlasmicRuntime';
 import './PrizeScratchCard';
 import './QuizFlow';
+import './LeadGenerationForm';
