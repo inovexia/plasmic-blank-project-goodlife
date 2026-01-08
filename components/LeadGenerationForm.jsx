@@ -141,7 +141,7 @@ function LeadGenerationForm({
   if (!form) return null;
 
   return (
-    <section style={{ padding, color: textColor }}>
+    <section style={{width: "100%", padding, color: textColor }}>
       <form style={{ margin: 'auto' }} onSubmit={onSubmit}>
         {/* GRID */}
         <div
