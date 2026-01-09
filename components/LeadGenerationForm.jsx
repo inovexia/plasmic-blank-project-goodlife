@@ -101,24 +101,34 @@ function LeadGenerationForm({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/submit-form', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+      const formPayload = new FormData();
+
+      Object.entries(values).forEach(([key, value]) => {
+        formPayload.append(key, value);
       });
 
-      if (!res.ok) throw new Error('Submission failed');
+      const apiUrl = `https://imgen3.dev.developer1.website/!/forms/${formHandle}`;
+
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        body: formPayload,
+        mode: 'cors',
+      });
+
+      if (!res.ok) {
+        throw new Error('Form submission failed');
+      }
 
       setSuccess(successMessage);
       setValues({});
       setErrors({});
     } catch (err) {
-      setFormError(err.message);
+      console.error(err);
+      setFormError(err.message || 'Form submission failed');
     } finally {
       setLoading(false);
     }
   }
-
 
 
 

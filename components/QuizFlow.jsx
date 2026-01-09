@@ -1,102 +1,151 @@
 'use client';
+
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { PLASMIC } from '../plasmic-init';
 
-/* Normalize API response */
-function normalizeQuiz(data) {
-  return data.questions.map((q, qIndex) => {
-    const choiceObj = q.choices[0];
-    const options = Object.values(choiceObj).map((arr) => arr[0]);
-
-    return {
-      id: qIndex,
-      question: q.question,
-      options: options.map((o, i) => ({
-        id: i,
-        label: o.choice,
-        isCorrect: o.isCorrect,
-        feedback: o.feedback,
-      })),
-    };
-  });
+/* ---------------- NORMALIZE QUESTIONS ---------------- */
+function normalizeQuestions(questions = []) {
+  return questions.map((q, qIndex) => ({
+    id: qIndex,
+    question: q.question,
+    options: q.answers.map((a, i) => ({
+      id: i,
+      label: a.choice,
+      isCorrect: a.is_correct,
+      feedback: a.feedback,
+    })),
+  }));
 }
 
-export default function QuizFlow({
-  apiUrl = '/api/quiz',
+function QuizFlow(props) {
+  const {
+    quizId = 'ef9987e3-163c-4f85-860f-6d2bf74cfd98',
+    apiBaseUrl = 'https://imgen3.dev.developer1.website/api/collections/quizzes/entries',
+    submitApiUrl = '/api/quiz-submit',
+    redirectUrl = '/quiz-result',
 
-  submitApiUrl = '/api/quiz-submit',
-  redirectUrl = '/quiz-result',
+    questionFontSize = 48,
+    questionColor = '#000000',
 
-  questionColor = '#000',
-  questionFontSize = 32,
-  questionLineHeight = 1.3,
+    optionFontSize = 18,
+    optionColor = '#000000',
+    radioSize = 18,
 
-  optionColor = '#333',
-  optionFontSize = 18,
-  optionLineHeight = 1.4,
+    feedbackFontSize = 16,
+    feedbackColor = '#000000',
+    correctColor = '#1fbf75',
+    incorrectColor = '#ff4d4f',
 
-  correctColor = 'green',
-  incorrectColor = 'red',
+    buttonText = 'Next',
+    buttonBg = '#0b4a8b',
+    buttonColor = '#ffffff',
+  } = props;
 
-  buttonText = 'Next',
-  buttonBg = '#0b4a8b',
-  buttonColor = '#fff',
-  buttonFontSize = 16,
-}) {
   const router = useRouter();
 
+  const [quizMeta, setQuizMeta] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [locked, setLocked] = useState(false);
-
-  // ⭐ Store all answers
   const [answers, setAnswers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
+  /* ---------------- LOAD QUIZ ---------------- */
   useEffect(() => {
-    fetch(apiUrl)
-      .then((res) => res.json())
-      .then((data) => setQuestions(normalizeQuiz(data)));
-  }, [apiUrl]);
+    async function loadQuiz() {
+      try {
+        setLoading(true);
+        setError('');
 
-  if (!questions.length) return <div>Loading quiz…</div>;
+        const res = await fetch(`${apiBaseUrl}/${quizId}`, {
+          cache: 'no-store',
+        });
+
+        // Invalid quiz ID
+        if (res.status === 404) {
+          setError('Quiz ID is not valid');
+          return;
+        }
+
+        if (!res.ok) throw new Error('Quiz fetch failed');
+
+        const json = await res.json();
+        const quiz = json?.data;
+
+        if (!quiz) {
+          setError('Quiz ID is not valid'); // No quiz data
+          return;
+        }
+
+        setQuizMeta({
+          quiz_id: quiz.id,
+          quiz_title: quiz.title,
+          event_id: quiz.event?.id || '',
+          event_title: quiz.event?.title || '',
+        });
+
+        setQuestions(normalizeQuestions(quiz.questions || []));
+      } catch (err) {
+        console.error(err);
+        setError('Failed to load quiz');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadQuiz();
+  }, [quizId, apiBaseUrl]);
+
+  /* ---------------- STATES ---------------- */
+  if (loading) {
+    return <div style={{ padding: 20 }}>Loading quiz…</div>;
+  }
+
+  if (error) {
+    return <div style={{ padding: 20, color: 'red' }}>{error}</div>;
+  }
+
+  if (!quizMeta || !questions.length) {
+    return <div style={{ padding: 20 }}>Quiz has no questions.</div>;
+  }
 
   const q = questions[current];
-  const selectedOption = selected !== null ? q.options[selected] : null;
   const isLast = current === questions.length - 1;
 
+  /* ---------------- HANDLERS ---------------- */
   function handleSelect(index) {
     if (locked) return;
 
     setSelected(index);
     setLocked(true);
 
-    // ⭐ Save answer
     setAnswers((prev) => [
       ...prev,
       {
-        questionId: q.id,
         question: q.question,
-        selectedOption: q.options[index].label,
-        isCorrect: q.options[index].isCorrect,
+        selected_option: q.options[index].label,
+        is_correct: q.options[index].isCorrect,
       },
     ]);
   }
 
   async function handleNext() {
     if (isLast) {
-      // ⭐ Submit all answers
-      const res = await fetch(submitApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers }),
-      });
+      try {
+        const res = await fetch(submitApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...quizMeta, answers }),
+        });
 
-      const result = await res.json();
-
-      // ⭐ Redirect with result ID
-      router.push(`${redirectUrl}?resultId=${result.id}`);
+        const result = await res.json();
+        router.push(`${redirectUrl}?resultId=${result?.id || ''}`);
+      } catch (err) {
+        console.error('Submit error:', err);
+      }
       return;
     }
 
@@ -105,96 +154,151 @@ export default function QuizFlow({
     setCurrent((c) => c + 1);
   }
 
+  /* ---------------- UI ---------------- */
   return (
-    <div>
-      <h2
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <div
         style={{
-          color: questionColor,
-          fontSize: questionFontSize,
-          lineHeight: questionLineHeight,
+          width: '100%',
+          maxWidth: 1000,
+          padding: '40px 20px',
+          textAlign: 'center',
         }}
       >
-        {q.question}
-      </h2>
+        {/* QUESTION */}
+        <h2
+          style={{
+            fontSize: questionFontSize,
+            color: questionColor,
+            fontWeight: 600,
+            marginBottom: 40,
+          }}
+        >
+          {q.question}
+        </h2>
 
-      {q.options.map((opt, i) => (
-        <label key={i} style={{ display: 'block', margin: '12px 0' }}>
-          <input
-            type='radio'
-            disabled={locked}
-            checked={selected === i}
-            onChange={() => handleSelect(i)}
-          />
-          <span
+        {/* OPTIONS + FEEDBACK */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '300px 360px',
+            gap: 60,
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            marginBottom: 40,
+          }}
+        >
+          {/* OPTIONS */}
+          <div style={{ textAlign: 'left' }}>
+            {q.options.map((opt, i) => (
+              <label
+                key={i}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  marginBottom: 16,
+                  fontSize: optionFontSize,
+                  color: optionColor,
+                  cursor: locked ? 'default' : 'pointer',
+                }}
+              >
+                <input
+                  type='radio'
+                  disabled={locked}
+                  checked={selected === i}
+                  onChange={() => handleSelect(i)}
+                  style={{ width: radioSize, height: radioSize }}
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+
+          {/* FEEDBACK */}
+          <div style={{ minHeight: 120, textAlign: 'left' }}>
+            {selected !== null && (
+              <>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: feedbackFontSize,
+                    color: q.options[selected].isCorrect
+                      ? correctColor
+                      : incorrectColor,
+                    marginBottom: 8,
+                  }}
+                >
+                  {q.options[selected].isCorrect ? 'Correct!' : 'Incorrect'}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: feedbackFontSize,
+                    color: feedbackColor,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {q.options[selected].feedback}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* BUTTON */}
+        {selected !== null && (
+          <button
+            onClick={handleNext}
             style={{
-              marginLeft: 8,
-              color: optionColor,
-              fontSize: optionFontSize,
-              lineHeight: optionLineHeight,
+              padding: '14px 44px',
+              background: buttonBg,
+              color: buttonColor,
+              border: 'none',
+              fontSize: 16,
+              cursor: 'pointer',
             }}
           >
-            {opt.label}
-          </span>
-        </label>
-      ))}
-
-      {selectedOption && (
-        <p
-          style={{
-            color: selectedOption.isCorrect ? correctColor : incorrectColor,
-          }}
-        >
-          {selectedOption.feedback}
-        </p>
-      )}
-
-      {selectedOption && (
-        <button
-          style={{
-            marginTop: 20,
-            background: buttonBg,
-            color: buttonColor,
-            fontSize: buttonFontSize,
-            padding: '12px 24px',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-          onClick={handleNext}
-        >
-          {isLast ? 'Submit' : buttonText}
-        </button>
-      )}
+            {isLast ? 'Submit' : buttonText}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
+/* ---------------- PLASMIC REGISTRATION ---------------- */
 PLASMIC.registerComponent(QuizFlow, {
   name: 'Quiz Flow',
   props: {
-    apiUrl: {
-      type: 'string',
-      defaultValue: '/api/quiz',
-    },
+    quizId: { type: 'string' },
+    apiBaseUrl: { type: 'string' },
     submitApiUrl: { type: 'string' },
-    redirectUrl: {
-      type: 'string',
-      displayName: 'Redirect URL after submit',
-    },
+    redirectUrl: { type: 'string' },
 
-    questionColor: { type: 'color' },
     questionFontSize: { type: 'number' },
-    questionLineHeight: { type: 'number' },
+    questionColor: { type: 'color' },
 
-    optionColor: { type: 'color' },
     optionFontSize: { type: 'number' },
-    optionLineHeight: { type: 'number' },
+    optionColor: { type: 'color' },
+    radioSize: { type: 'number' },
 
+    feedbackFontSize: { type: 'number' },
+    feedbackColor: { type: 'color' },
     correctColor: { type: 'color' },
     incorrectColor: { type: 'color' },
 
     buttonText: { type: 'string' },
     buttonBg: { type: 'color' },
     buttonColor: { type: 'color' },
-    buttonFontSize: { type: 'number' },
   },
 });
+
+export default QuizFlow;

@@ -13,10 +13,12 @@
     "@plasmicapp/host": "^1.0.231",
     "@plasmicapp/loader-nextjs": "^1.0.447",
     "@plasmicapp/react-web": "^0.2.410",
+    "bootstrap": "^5.3.8",
     "build": "^0.1.4",
     "next": "14.2.35",
     "npm": "^11.7.0",
     "react": "^18",
+    "react-bootstrap": "^2.10.10",
     "react-dom": "^18",
     "react-google-recaptcha": "^3.1.0",
     "run": "^1.5.0"
