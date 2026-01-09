@@ -279,99 +279,94 @@ function LeadGenerationForm({
 
 PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
+
+  propGroups: {
+    formSettings: {
+      name: 'Form Settings',
+    },
+    inputSettings: {
+      name: 'Input Field Settings',
+    },
+    buttonSettings: {
+      name: 'Button Style',
+    },
+  },
+
   props: {
-    /* ---------------- FORM CONFIG ---------------- */
+    /* ---------- FORM SETTINGS ---------- */
     formHandle: {
       type: 'string',
-      defaultValue: 'toronto_water_front',
-      section: 'Form & Messages',
-    },
-    submitText: {
-      type: 'string',
-      defaultValue: 'Submit',
-      section: 'Form & Messages',
+      defaultValue: 'redstripe_metro_lead_form_2025',
+      propGroup: 'formSettings',
     },
     errorMessage: {
       type: 'string',
-      defaultValue: 'Something wrong with form data!',
-      section: 'Form & Messages',
+      defaultValue: 'Something wrong with form API',
+      propGroup: 'formSettings',
     },
     successMessage: {
       type: 'string',
       defaultValue: 'Form submitted successfully!',
-      section: 'Form & Messages',
+      propGroup: 'formSettings',
     },
-
-    /* ---------------- LAYOUT ---------------- */
     padding: {
       type: 'string',
       defaultValue: '40px',
-      section: 'Layout',
+      propGroup: 'formSettings',
+    },
+
+    /* ---------- INPUT FIELD SETTINGS ---------- */
+    inputRadius: {
+      type: 'number',
+      defaultValue: 5,
+      propGroup: 'inputSettings',
+    },
+    inputHeight: {
+      type: 'number',
+      defaultValue: 38,
+      propGroup: 'inputSettings',
+    },
+    labelColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      propGroup: 'inputSettings',
     },
     fieldGap: {
       type: 'number',
       defaultValue: 16,
-      section: 'Layout',
-    },
-    textColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      section: 'Layout',
+      propGroup: 'inputSettings',
     },
 
-    /* ---------------- LABEL STYLING ---------------- */
-    labelColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      section: 'Label Styling',
-    },
-    labelFontSize: {
-      type: 'number',
-      defaultValue: 14,
-      section: 'Label Styling',
-    },
-
-    /* ---------------- INPUT FIELD STYLING ---------------- */
-    inputHeight: {
-      type: 'number',
-      defaultValue: 38,
-      section: 'Input Field Styling',
-    },
-    inputPadding: {
+    /* ---------- BUTTON SETTINGS ---------- */
+    submitText: {
       type: 'string',
-      defaultValue: '6px 10px',
-      section: 'Input Field Styling',
+      defaultValue: 'Submit',
+      propGroup: 'buttonSettings',
     },
-    inputRadius: {
-      type: 'number',
-      defaultValue: 2,
-      section: 'Input Field Styling',
-    },
-
-    /* ---------------- BUTTON STYLING ---------------- */
     buttonTextColor: {
       type: 'color',
       defaultValue: '#ffffff',
-      section: 'Button Styling',
+      propGroup: 'buttonSettings',
     },
     buttonBorderColor: {
       type: 'color',
       defaultValue: '#ffffff',
-      section: 'Button Styling',
+      propGroup: 'buttonSettings',
     },
     buttonPadding: {
       type: 'string',
       defaultValue: '8px 28px',
-      section: 'Button Styling',
+      propGroup: 'buttonSettings',
     },
     buttonAlign: {
       type: 'choice',
       options: ['left', 'center', 'right'],
       defaultValue: 'center',
-      section: 'Button Styling',
+      propGroup: 'buttonSettings',
     },
   },
 });
+
 
 
 export default LeadGenerationForm;
