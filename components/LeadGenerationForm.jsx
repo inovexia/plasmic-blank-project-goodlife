@@ -92,6 +92,7 @@ function LeadGenerationForm({
   // ---------------- SUBMIT ----------------
   async function onSubmit(e) {
     e.preventDefault();
+
     setSuccess('');
     setFormError('');
 
@@ -100,25 +101,47 @@ function LeadGenerationForm({
     setLoading(true);
 
     try {
-      // Submit via your Next.js API route to avoid CORS
-      const res = await fetch('/api/lead-submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formHandle, values }),
+      const formPayload = new FormData();
+
+      Object.entries(values).forEach(([key, value]) => {
+        formPayload.append(key, value);
       });
 
-      const data = await res.json();
+      const apiUrl = `https://imgen3.dev.developer1.website/!/forms/${formHandle}`;
 
-      if (!res.ok) throw new Error(data?.error || 'Submit failed');
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        body: formPayload,
+        mode: 'cors',
+      });
+
+      if (!res.ok) {
+        throw new Error('Form submission failed');
+      }
 
       setSuccess(successMessage);
       setValues({});
+      setErrors({});
     } catch (err) {
-      setFormError(err.message || 'Form submission failed. Please try again.');
+      console.error(err);
+      setFormError(err.message || 'Form submission failed');
     } finally {
       setLoading(false);
     }
   }
+
+
+
+  // helper function to read cookies if needed
+  function getCookie(name) {
+    const match = document.cookie.match(
+      new RegExp('(^| )' + name + '=([^;]+)')
+    );
+    if (match) return match[2];
+    return null;
+  }
+
+
 
   const buttonAlignmentMap = {
     left: 'flex-start',
@@ -131,9 +154,7 @@ function LeadGenerationForm({
   if (formError && !form) {
     return (
       <section style={{ padding, color: textColor }}>
-        <div style={{ margin: 'auto', color: 'red' }}>
-          {formError}
-        </div>
+        <div style={{ margin: 'auto', color: 'red' }}>{formError}</div>
       </section>
     );
   }
@@ -141,7 +162,7 @@ function LeadGenerationForm({
   if (!form) return null;
 
   return (
-    <section style={{width: "100%", padding, color: textColor }}>
+    <section style={{ width: '100%', padding, color: textColor }}>
       <form style={{ margin: 'auto' }} onSubmit={onSubmit}>
         <div
           style={{
