@@ -9,7 +9,7 @@ export async function POST(req) {
     }
 
     const apiRes = await fetch(
-      `https://dev.imgen3.dev1.co.in/!/forms/${formHandle}`,
+      `https://imgen3.dev.developer1.website/!/forms/${formHandle}`,
       {
         method: 'POST',
         headers: {
