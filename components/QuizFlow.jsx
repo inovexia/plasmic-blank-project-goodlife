@@ -20,7 +20,7 @@ function normalizeQuestions(questions = []) {
 
 function QuizFlow(props) {
   const {
-    quizId = 'ef9987e3-163c-4f85-860f-6d2bf74cfd98',
+    quizId = '32b396df-fb0c-46ca-ac1c-6ba455c5c8e1',
     apiBaseUrl = 'https://imgen3.dev.developer1.website/api/collections/quizzes/entries',
     submitApiUrl = '/api/quiz-submit',
     redirectUrl = '/quiz-result',
@@ -64,7 +64,6 @@ function QuizFlow(props) {
           cache: 'no-store',
         });
 
-        // Invalid quiz ID
         if (res.status === 404) {
           setError('Quiz ID is not valid');
           return;
@@ -101,15 +100,25 @@ function QuizFlow(props) {
 
   /* ---------------- STATES ---------------- */
   if (loading) {
-    return <div style={{ padding: 20 }}>Loading quiz…</div>;
+    return (
+      <div style={{ padding: 20, textAlign: 'center' }}>Loading quiz…</div>
+    );
   }
 
   if (error) {
-    return <div style={{ padding: 20, color: 'red' }}>{error}</div>;
+    return (
+      <div style={{ padding: 20, color: 'red', textAlign: 'center' }}>
+        {error}
+      </div>
+    );
   }
 
   if (!quizMeta || !questions.length) {
-    return <div style={{ padding: 20 }}>Quiz has no questions.</div>;
+    return (
+      <div style={{ padding: 20, textAlign: 'center' }}>
+        Quiz has no questions.
+      </div>
+    );
   }
 
   const q = questions[current];
@@ -158,17 +167,18 @@ function QuizFlow(props) {
   return (
     <div
       style={{
-        minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        padding: '40px 20px',
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <div
         style={{
           width: '100%',
           maxWidth: 1000,
-          padding: '40px 20px',
           textAlign: 'center',
         }}
       >
