@@ -45,7 +45,7 @@ function LeadGenerationForm({
     setFormError('');
     setSuccess('');
 
-    fetch('https://dev.imgen3.dev1.co.in/api/forms') // keep loading form metadata from external API
+    fetch('https://imgen3.dev.developer1.website/api/forms') // keep loading form metadata from external API
       .then((r) => r.json())
       .then((json) => {
         const selected = json?.data?.find((f) => f.handle === formHandle);
@@ -143,7 +143,6 @@ function LeadGenerationForm({
   return (
     <section style={{width: "100%", padding, color: textColor }}>
       <form style={{ margin: 'auto' }} onSubmit={onSubmit}>
-        {/* GRID */}
         <div
           style={{
             display: 'grid',
