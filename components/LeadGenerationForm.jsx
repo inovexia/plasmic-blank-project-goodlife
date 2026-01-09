@@ -280,40 +280,98 @@ function LeadGenerationForm({
 PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
   props: {
-    formHandle: { type: 'string', defaultValue: 'toronto_water_front' },
-    submitText: { type: 'string', defaultValue: 'Submit' },
-
+    /* ---------------- FORM CONFIG ---------------- */
+    formHandle: {
+      type: 'string',
+      defaultValue: 'toronto_water_front',
+      section: 'Form & Messages',
+    },
+    submitText: {
+      type: 'string',
+      defaultValue: 'Submit',
+      section: 'Form & Messages',
+    },
     errorMessage: {
       type: 'string',
       defaultValue: 'Something wrong with form data!',
+      section: 'Form & Messages',
     },
     successMessage: {
       type: 'string',
       defaultValue: 'Form submitted successfully!',
+      section: 'Form & Messages',
     },
 
-    padding: { type: 'string', defaultValue: '40px' },
-    textColor: { type: 'color', defaultValue: '#ffffff' },
+    /* ---------------- LAYOUT ---------------- */
+    padding: {
+      type: 'string',
+      defaultValue: '40px',
+      section: 'Layout',
+    },
+    fieldGap: {
+      type: 'number',
+      defaultValue: 16,
+      section: 'Layout',
+    },
+    textColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      section: 'Layout',
+    },
 
-    fieldGap: { type: 'number', defaultValue: 16 },
+    /* ---------------- LABEL STYLING ---------------- */
+    labelColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      section: 'Label Styling',
+    },
+    labelFontSize: {
+      type: 'number',
+      defaultValue: 14,
+      section: 'Label Styling',
+    },
 
-    labelColor: { type: 'color', defaultValue: '#ffffff' },
-    labelFontSize: { type: 'number', defaultValue: 14 },
+    /* ---------------- INPUT FIELD STYLING ---------------- */
+    inputHeight: {
+      type: 'number',
+      defaultValue: 38,
+      section: 'Input Field Styling',
+    },
+    inputPadding: {
+      type: 'string',
+      defaultValue: '6px 10px',
+      section: 'Input Field Styling',
+    },
+    inputRadius: {
+      type: 'number',
+      defaultValue: 2,
+      section: 'Input Field Styling',
+    },
 
-    inputHeight: { type: 'number', defaultValue: 38 },
-    inputPadding: { type: 'string', defaultValue: '6px 10px' },
-    inputRadius: { type: 'number', defaultValue: 2 },
-
-    buttonTextColor: { type: 'color', defaultValue: '#ffffff' },
-    buttonBorderColor: { type: 'color', defaultValue: '#ffffff' },
-    buttonPadding: { type: 'string', defaultValue: '8px 28px' },
-
+    /* ---------------- BUTTON STYLING ---------------- */
+    buttonTextColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      section: 'Button Styling',
+    },
+    buttonBorderColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      section: 'Button Styling',
+    },
+    buttonPadding: {
+      type: 'string',
+      defaultValue: '8px 28px',
+      section: 'Button Styling',
+    },
     buttonAlign: {
       type: 'choice',
       options: ['left', 'center', 'right'],
       defaultValue: 'center',
+      section: 'Button Styling',
     },
   },
 });
+
 
 export default LeadGenerationForm;
