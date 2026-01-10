@@ -50,8 +50,9 @@ export default function PrizeScratchCard({
   fallbackImage = 'https://picsum.photos/400/300',
 
   scratchThreshold = 60,
+  scratchBrushSize = 30, // ✅ NEW PROP (DEFAULT 30)
 
-  popupTitle = '🎉 Congratulations!',
+  popupTitle = 'Congratulations!',
   popupMessage = 'You won a special prize',
   buttonText = 'Claim Now',
   buttonLink = '#',
@@ -66,23 +67,22 @@ export default function PrizeScratchCard({
   const [prizeImage, setPrizeImage] = useState(null);
 
   /* ================== FETCH IMAGE ================== */
- useEffect(() => {
-   if (!apiUrl) {
-     setPrizeImage(fallbackImage);
-     return;
-   }
+  useEffect(() => {
+    if (!apiUrl) {
+      setPrizeImage(fallbackImage);
+      return;
+    }
 
-   fetch(`/api/image-proxy?url=${encodeURIComponent(apiUrl)}`)
-     .then((res) => res.json())
-     .then((data) => {
-       const img = data?.[imageKey];
-       setPrizeImage(img || fallbackImage);
-     })
-     .catch(() => {
-       setPrizeImage(fallbackImage);
-     });
- }, [apiUrl, imageKey, fallbackImage]);
-
+    fetch(`/api/image-proxy?url=${encodeURIComponent(apiUrl)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const img = data?.[imageKey];
+        setPrizeImage(img || fallbackImage);
+      })
+      .catch(() => {
+        setPrizeImage(fallbackImage);
+      });
+  }, [apiUrl, imageKey, fallbackImage]);
 
   /* ================== SCRATCH LOGIC ================== */
   useEffect(() => {
@@ -103,7 +103,7 @@ export default function PrizeScratchCard({
 
     const scratch = (x, y) => {
       ctx.beginPath();
-      ctx.arc(x, y, 18, 0, Math.PI * 2);
+      ctx.arc(x, y, scratchBrushSize, 0, Math.PI * 2); // ✅ USE PROP
       ctx.fill();
     };
 
@@ -150,7 +150,14 @@ export default function PrizeScratchCard({
       canvas.removeEventListener('touchend', up);
       canvas.removeEventListener('touchmove', move);
     };
-  }, [prizeImage, width, height, coverColor, scratchThreshold]);
+  }, [
+    prizeImage,
+    width,
+    height,
+    coverColor,
+    scratchThreshold,
+    scratchBrushSize,
+  ]);
 
   if (!prizeImage) return <p>Loading scratch card…</p>;
 
@@ -201,82 +208,38 @@ export default function PrizeScratchCard({
   );
 }
 
+/* ================== PLASMIC REGISTRATION ================== */
 PLASMIC.registerComponent(PrizeScratchCard, {
   name: 'Prize Scratch Card',
   props: {
     /* Size */
-    width: {
-      type: 'number',
-      defaultValue: 300,
-    },
-    height: {
-      type: 'number',
-      defaultValue: 180,
-    },
+    width: { type: 'number', defaultValue: 300 },
+    height: { type: 'number', defaultValue: 180 },
 
-    /* API CONFIG (NEW & IMPORTANT) */
-    apiUrl: {
-      type: 'string',
-      displayName: 'API URL',
-      description: 'Provide API URL for this project (dog / cat / cow)',
-    },
-    imageKey: {
-      type: 'string',
-      defaultValue: 'file',
-      displayName: 'Image Key',
-      description: 'Key name from API response that contains image URL',
-    },
-    fallbackImage: {
-      type: 'imageUrl',
-      displayName: 'Fallback Image',
-    },
+    /* API */
+    apiUrl: { type: 'string', displayName: 'API URL' },
+    imageKey: { type: 'string', defaultValue: 'file' },
+    fallbackImage: { type: 'imageUrl' },
 
     /* Scratch behavior */
-    coverColor: {
-      type: 'color',
-      defaultValue: '#B0B0B0',
-    },
-    scratchThreshold: {
+    coverColor: { type: 'color', defaultValue: '#B0B0B0' },
+    scratchThreshold: { type: 'number', defaultValue: 60 },
+    scratchBrushSize: {
       type: 'number',
-      defaultValue: 60,
-    },
-
-    /* Popup content */
-    popupTitle: {
-      type: 'string',
-      defaultValue: '🎉 Congratulations!',
-    },
-    popupMessage: {
-      type: 'string',
-      defaultValue: 'You won a special prize!',
-    },
-
-    /* Button */
-    buttonText: {
-      type: 'string',
-      defaultValue: 'Claim Now',
-    },
-    buttonLink: {
-      type: 'href',
-    },
-
-    buttonBgColor: {
-      type: 'color',
-      defaultValue: '#28a745',
-    },
-    buttonTextColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
+      defaultValue: 30,
+      displayName: 'Scratch Brush Size',
     },
 
     /* Popup */
-    popupBgColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-    },
-    showClose: {
-      type: 'boolean',
-      defaultValue: true,
-    },
+    popupTitle: { type: 'string', defaultValue: '🎉 Congratulations!' },
+    popupMessage: { type: 'string', defaultValue: 'You won a special prize!' },
+    popupBgColor: { type: 'color', defaultValue: '#ffffff' },
+    showClose: { type: 'boolean', defaultValue: true },
+
+    /* Button */
+    buttonText: { type: 'string', defaultValue: 'Claim Now' },
+    buttonLink: { type: 'href' },
+    buttonBgColor: { type: 'color', defaultValue: '#28a745' },
+    buttonTextColor: { type: 'color', defaultValue: '#ffffff' },
   },
 });
