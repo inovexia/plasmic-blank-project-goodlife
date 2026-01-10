@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { PLASMIC } from '../plasmic-init';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 function LeadGenerationForm({
   formHandle,
@@ -45,7 +46,7 @@ function LeadGenerationForm({
     setFormError('');
     setSuccess('');
 
-    fetch('https://imgen3.dev.developer1.website/api/forms') // keep loading form metadata from external API
+    fetch(`${API_BASE_URL}/forms`) // keep loading form metadata from external API
       .then((r) => r.json())
       .then((json) => {
         const selected = json?.data?.find((f) => f.handle === formHandle);
@@ -107,7 +108,7 @@ function LeadGenerationForm({
         formPayload.append(key, value);
       });
 
-      const apiUrl = `https://imgen3.dev.developer1.website/form/${formHandle}/submit`;
+      const apiUrl = `${API_BASE_URL}/form/${formHandle}/submit`;
 
       const res = await fetch(apiUrl, {
         method: 'POST',
