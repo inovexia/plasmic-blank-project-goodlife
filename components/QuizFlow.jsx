@@ -9,7 +9,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 /* ---------------- NORMALIZE QUESTIONS ---------------- */
 function normalizeQuestions(questions = []) {
   return questions.map((q, qIndex) => ({
-    id: qIndex,
+    id: qIndex + 1,
     question: q.question,
     options: q.answers.map((a, i) => ({
       id: i,
@@ -23,12 +23,13 @@ function normalizeQuestions(questions = []) {
 function QuizFlow({
   quizId,
   redirectUrl = '/quiz-result',
+  email = 'johndoe@gmail.com',
 
   questionFontSize = 48,
-  questionColor = '#000000',
+  questionColor = '#ffffff',
 
   optionFontSize = 18,
-  optionColor = '#000000',
+  optionColor = '#ffffff',
   radioSize = 18,
 
   feedbackFontSize = 16,
@@ -42,12 +43,11 @@ function QuizFlow({
 }) {
   const router = useRouter();
 
-  const [quizMeta, setQuizMeta] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [locked, setLocked] = useState(false);
-  const [answers, setAnswers] = useState([]);
+  const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -57,35 +57,15 @@ function QuizFlow({
 
     async function loadQuiz() {
       try {
-        setLoading(true);
-        setError('');
-
         const res = await fetch(
           `${API_BASE_URL}/collections/quizzes/entries/${quizId}`,
           { cache: 'no-store' }
         );
-
-        if (!res.ok) throw new Error('Quiz fetch failed');
+        if (!res.ok) throw new Error();
 
         const json = await res.json();
-        const quiz = json?.data;
-
-        if (!quiz) {
-          setError('Invalid quiz ID');
-          return;
-        }
-
-        // Hidden fields
-        setQuizMeta({
-          quiz_id: quiz.id,
-          quiz_title: quiz.title,
-          event_id: quiz.event?.id || '',
-          event_title: quiz.event?.title || '',
-        });
-
-        setQuestions(normalizeQuestions(quiz.questions || []));
-      } catch (err) {
-        console.error(err);
+        setQuestions(normalizeQuestions(json?.data?.questions || []));
+      } catch {
         setError('Failed to load quiz');
       } finally {
         setLoading(false);
@@ -95,88 +75,80 @@ function QuizFlow({
     loadQuiz();
   }, [quizId]);
 
-  /* ---------------- STATES ---------------- */
-  if (loading) {
-    return (
-      <div style={{ padding: 20, textAlign: 'center' }}>Loading quiz…</div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: 20, color: 'red', textAlign: 'center' }}>
-        {error}
-      </div>
-    );
-  }
-
-  if (!questions.length) {
-    return (
-      <div style={{ padding: 20, textAlign: 'center' }}>
-        Quiz has no questions.
-      </div>
-    );
-  }
+  if (loading) return <div>Loading quiz…</div>;
+  if (error) return <div style={{ color: 'red' }}>{error}</div>;
 
   const q = questions[current];
   const isLast = current === questions.length - 1;
+  const selectedOption = selected !== null ? q.options[selected] : null;
 
-  /* ---------------- HANDLERS ---------------- */
+  /* ---------------- SELECT ANSWER ---------------- */
   function handleSelect(index) {
     if (locked) return;
 
     setSelected(index);
     setLocked(true);
 
-    setAnswers((prev) => [
+    setAnswers((prev) => ({
       ...prev,
-      {
+      [q.id]: {
         question: q.question,
-        selected_option: q.options[index].label,
-        is_correct: q.options[index].isCorrect,
+        answer: q.options[index].label,
       },
-    ]);
+    }));
   }
 
+  /* ---------------- NEXT / SUBMIT ---------------- */
   async function handleNext() {
-    if (isLast) {
-      try {
-        const formData = new FormData();
-
-        // Hidden fields
-        formData.append('quiz_id', quizMeta.quiz_id);
-        formData.append('quiz_title', quizMeta.quiz_title);
-        formData.append('event_id', quizMeta.event_id);
-        formData.append('event_title', quizMeta.event_title);
-
-        // Answers (stringified)
-        formData.append('answers', JSON.stringify(answers));
-
-        const res = await fetch(`${API_BASE_URL}/quiz/submit`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!res.ok) throw new Error('Quiz submit failed');
-
-        const result = await res.json();
-
-        router.push(`${redirectUrl}?resultId=${result?.id || ''}`);
-      } catch (err) {
-        console.error(err);
-        alert('Quiz submission failed');
-      }
+    if (!isLast) {
+      setSelected(null);
+      setLocked(false);
+      setCurrent((c) => c + 1);
       return;
     }
 
-    setSelected(null);
-    setLocked(false);
-    setCurrent((c) => c + 1);
+    try {
+      const formData = new FormData();
+      formData.append('email', email);
+
+      Object.keys(answers).forEach((key) => {
+        formData.append(`response[${key}][question]`, answers[key].question);
+        formData.append(`response[${key}][answer]`, answers[key].answer);
+      });
+
+      await fetch(`${API_BASE_URL}/quiz/${quizId}/submit`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      router.push(redirectUrl);
+    } catch {
+      alert('Quiz submission failed');
+    }
   }
 
   /* ---------------- UI ---------------- */
   return (
-    <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+    <div style={{ padding: 40, textAlign: 'center' }}>
+      {/* INLINE RESPONSIVE CSS */}
+      <style>{`
+        .quiz-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 40px;
+          max-width: 900px;
+          margin: 40px auto 0;
+          align-items: start;
+        }
+
+        @media (max-width: 768px) {
+          .quiz-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      {/* QUESTION */}
       <h2
         style={{
           fontSize: questionFontSize,
@@ -187,15 +159,8 @@ function QuizFlow({
         {q.question}
       </h2>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '300px 360px',
-          gap: 60,
-          justifyContent: 'center',
-          marginBottom: 40,
-        }}
-      >
+      {/* OPTIONS + FEEDBACK ROW */}
+      <div className='quiz-grid'>
         {/* OPTIONS */}
         <div style={{ textAlign: 'left' }}>
           {q.options.map((opt, i) => (
@@ -207,6 +172,7 @@ function QuizFlow({
                 marginBottom: 16,
                 fontSize: optionFontSize,
                 color: optionColor,
+                cursor: locked ? 'default' : 'pointer',
               }}
             >
               <input
@@ -222,32 +188,43 @@ function QuizFlow({
         </div>
 
         {/* FEEDBACK */}
-        <div style={{ minHeight: 120, textAlign: 'left' }}>
-          {selected !== null && (
+        <div style={{ textAlign: 'left', minHeight: 120 }}>
+          {selectedOption && (
             <>
               <div
                 style={{
                   fontWeight: 600,
                   fontSize: feedbackFontSize,
-                  color: q.options[selected].isCorrect
+                  color: selectedOption.isCorrect
                     ? correctColor
                     : incorrectColor,
+                  marginBottom: 8,
                 }}
               >
-                {q.options[selected].isCorrect ? 'Correct!' : 'Incorrect'}
+                {selectedOption.isCorrect ? 'Correct!' : 'Incorrect'}
               </div>
-              <div style={{ fontSize: feedbackFontSize, color: feedbackColor }}>
-                {q.options[selected].feedback}
-              </div>
+
+              {selectedOption.feedback && (
+                <div
+                  style={{
+                    fontSize: feedbackFontSize,
+                    color: feedbackColor,
+                  }}
+                >
+                  {selectedOption.feedback}
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
 
+      {/* BUTTON */}
       {selected !== null && (
         <button
           onClick={handleNext}
           style={{
+            marginTop: 50,
             padding: '14px 44px',
             background: buttonBg,
             color: buttonColor,
@@ -268,6 +245,7 @@ PLASMIC.registerComponent(QuizFlow, {
   props: {
     quizId: { type: 'string' },
     redirectUrl: { type: 'string', defaultValue: '/quiz-result' },
+    email: { type: 'string', defaultValue: 'johndoe@gmail.com' },
 
     questionFontSize: { type: 'number' },
     questionColor: { type: 'color' },
