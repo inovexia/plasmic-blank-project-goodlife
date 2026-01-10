@@ -3,15 +3,16 @@
 import { useEffect, useState } from 'react';
 import { PLASMIC } from '../plasmic-init';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 function LeadGenerationForm({
   formHandle,
-  submitText = 'Submit',
 
+  submitText = 'Submit',
   padding = '40px',
   textColor = '#ffffff',
 
   fieldGap = 16,
-
   labelColor = '#ffffff',
   labelFontSize = 14,
 
@@ -37,18 +38,20 @@ function LeadGenerationForm({
 
   useEffect(() => setMounted(true), []);
 
-  // ---------------- LOAD FORM ----------------
+  /* ---------------- LOAD FORM ---------------- */
   useEffect(() => {
-    if (!mounted || !formHandle) return;
+    if (!mounted || !formHandle || !API_BASE) return;
 
     setForm(null);
     setFormError('');
     setSuccess('');
 
-    fetch('https://imgen3.dev.developer1.website/api/forms') // keep loading form metadata from external API
+    fetch(`${API_BASE}/api/forms`)
       .then((r) => r.json())
       .then((json) => {
-        const selected = json?.data?.find((f) => f.handle === formHandle);
+        const selected = json?.data?.find(
+          (f) => f.handle === formHandle
+        );
 
         if (!selected) {
           setFormError(errorMessage);
@@ -57,12 +60,10 @@ function LeadGenerationForm({
 
         setForm(selected);
       })
-      .catch(() => {
-        setFormError(errorMessage);
-      });
+      .catch(() => setFormError(errorMessage));
   }, [mounted, formHandle, errorMessage]);
 
-  // ---------------- VALIDATION ----------------
+  /* ---------------- VALIDATION ---------------- */
   function validate() {
     const errs = {};
 
@@ -89,7 +90,7 @@ function LeadGenerationForm({
     return Object.keys(errs).length === 0;
   }
 
-  // ---------------- SUBMIT ----------------
+  /* ---------------- SUBMIT ---------------- */
   async function onSubmit(e) {
     e.preventDefault();
 
@@ -102,46 +103,30 @@ function LeadGenerationForm({
 
     try {
       const formPayload = new FormData();
+      Object.entries(values).forEach(([k, v]) =>
+        formPayload.append(k, v)
+      );
 
-      Object.entries(values).forEach(([key, value]) => {
-        formPayload.append(key, value);
-      });
+      const res = await fetch(
+        `${API_BASE}/api/form/${formHandle}/submit`,
+        {
+          method: 'POST',
+          body: formPayload,
+          mode: 'cors',
+        }
+      );
 
-      const apiUrl = `https://imgen3.dev.developer1.website/!/forms/${formHandle}`;
-
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        body: formPayload,
-        mode: 'cors',
-      });
-
-      if (!res.ok) {
-        throw new Error('Form submission failed');
-      }
+      if (!res.ok) throw new Error('Form submission failed');
 
       setSuccess(successMessage);
       setValues({});
       setErrors({});
     } catch (err) {
-      console.error(err);
-      setFormError(err.message || 'Form submission failed');
+      setFormError(err.message || errorMessage);
     } finally {
       setLoading(false);
     }
   }
-
-
-
-  // helper function to read cookies if needed
-  function getCookie(name) {
-    const match = document.cookie.match(
-      new RegExp('(^| )' + name + '=([^;]+)')
-    );
-    if (match) return match[2];
-    return null;
-  }
-
-
 
   const buttonAlignmentMap = {
     left: 'flex-start',
@@ -150,20 +135,13 @@ function LeadGenerationForm({
   };
 
   if (!mounted) return null;
-
-  if (formError && !form) {
-    return (
-      <section style={{ padding, color: textColor }}>
-        <div style={{ margin: 'auto', color: 'red' }}>{formError}</div>
-      </section>
-    );
-  }
-
+  if (formError && !form)
+    return <div style={{ padding, color: 'red' }}>{formError}</div>;
   if (!form) return null;
 
   return (
     <section style={{ width: '100%', padding, color: textColor }}>
-      <form style={{ margin: 'auto' }} onSubmit={onSubmit}>
+      <form onSubmit={onSubmit}>
         <div
           style={{
             display: 'grid',
@@ -210,8 +188,6 @@ function LeadGenerationForm({
                         padding: inputPadding,
                         borderRadius: inputRadius,
                         border: 'none',
-                        outline: 'none',
-                        boxShadow: 'none',
                       }}
                     />
                   </>
@@ -249,7 +225,6 @@ function LeadGenerationForm({
           })}
         </div>
 
-        {/* SUBMIT */}
         <div
           style={{
             display: 'flex',
@@ -265,7 +240,6 @@ function LeadGenerationForm({
               color: buttonTextColor,
               border: `1px solid ${buttonBorderColor}`,
               padding: buttonPadding,
-              cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
             {loading ? 'Submitting…' : submitText}
@@ -273,48 +247,25 @@ function LeadGenerationForm({
         </div>
 
         {success && (
-          <div style={{ marginTop: 16, color: '#aaffaa' }}>{success}</div>
+          <div style={{ marginTop: 16, color: '#aaffaa' }}>
+            {success}
+          </div>
         )}
       </form>
-
-      <style jsx>{`
-        input:focus,
-        input:focus-visible,
-        input:active,
-        button:focus,
-        button:focus-visible,
-        button:active {
-          outline: none !important;
-          box-shadow: none !important;
-        }
-
-        @media (max-width: 768px) {
-          div[style*='grid-column: span 6'] {
-            grid-column: span 12 !important;
-          }
-        }
-      `}</style>
     </section>
   );
 }
 
+/* ---------------- PLASMIC REGISTRATION ---------------- */
+
 PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
-
   propGroups: {
-    formSettings: {
-      name: 'Form Settings',
-    },
-    inputSettings: {
-      name: 'Input Field Settings',
-    },
-    buttonSettings: {
-      name: 'Button Style',
-    },
+    formSettings: { name: 'Form Settings' },
+    inputSettings: { name: 'Input Fields' },
+    buttonSettings: { name: 'Button' },
   },
-
   props: {
-    /* ---------- FORM SETTINGS ---------- */
     formHandle: {
       type: 'string',
       defaultValue: 'redstripe_metro_lead_form_2025',
@@ -335,8 +286,6 @@ PLASMIC.registerComponent(LeadGenerationForm, {
       defaultValue: '40px',
       propGroup: 'formSettings',
     },
-
-    /* ---------- INPUT FIELD SETTINGS ---------- */
     inputRadius: {
       type: 'number',
       defaultValue: 5,
@@ -347,36 +296,14 @@ PLASMIC.registerComponent(LeadGenerationForm, {
       defaultValue: 38,
       propGroup: 'inputSettings',
     },
-    labelColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'inputSettings',
-    },
     fieldGap: {
       type: 'number',
       defaultValue: 16,
       propGroup: 'inputSettings',
     },
-
-    /* ---------- BUTTON SETTINGS ---------- */
     submitText: {
       type: 'string',
       defaultValue: 'Submit',
-      propGroup: 'buttonSettings',
-    },
-    buttonTextColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'buttonSettings',
-    },
-    buttonBorderColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'buttonSettings',
-    },
-    buttonPadding: {
-      type: 'string',
-      defaultValue: '8px 28px',
       propGroup: 'buttonSettings',
     },
     buttonAlign: {
@@ -387,7 +314,5 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     },
   },
 });
-
-
 
 export default LeadGenerationForm;
