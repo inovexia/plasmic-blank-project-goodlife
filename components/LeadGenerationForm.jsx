@@ -27,7 +27,10 @@ function LeadGenerationForm({
 
   errorMessage = 'Something wrong with form data!',
   successMessage = 'Form submitted successfully!',
-}) {
+
+  redirectUrl = '',
+})
+ {
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState(null);
   const [values, setValues] = useState({});
@@ -123,6 +126,13 @@ function LeadGenerationForm({
       setSuccess(successMessage);
       setValues({});
       setErrors({});
+
+      // REDIRECT AFTER SUCCESS
+      if (redirectUrl) {
+        setTimeout(() => {
+          window.location.href = redirectUrl;
+        }, 500);
+      }
     } catch (err) {
       console.error(err);
       setFormError(err.message || 'Form submission failed');
@@ -303,15 +313,9 @@ PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
 
   propGroups: {
-    formSettings: {
-      name: 'Form Settings',
-    },
-    inputSettings: {
-      name: 'Input Field Settings',
-    },
-    buttonSettings: {
-      name: 'Button Style',
-    },
+    formSettings: { name: 'Form Settings' },
+    inputSettings: { name: 'Input Field Settings' },
+    buttonSettings: { name: 'Button Style' },
   },
 
   props: {
@@ -330,6 +334,12 @@ PLASMIC.registerComponent(LeadGenerationForm, {
       type: 'string',
       defaultValue: 'Form submitted successfully!',
       propGroup: 'formSettings',
+    },
+    redirectUrl: {
+      type: 'string',
+      defaultValue: '',
+      propGroup: 'formSettings',
+      description: 'Redirect user after successful form submission',
     },
     padding: {
       type: 'string',
@@ -388,6 +398,7 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     },
   },
 });
+
 
 
 
