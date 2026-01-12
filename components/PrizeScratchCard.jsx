@@ -7,13 +7,20 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const DEFAULT_EVENT_ID = 'fa69234d-55c1-4439-9c32-6dbfcacfb48a';
 
+/* ---------- PLASMIC PREVIEW PRIZE ---------- */
 const PREVIEW_PRIZE = {
   title: '🎁 Sample Prize',
   url: null,
 };
 
+/* ---------- HELPERS ---------- */
 const isValidUUID = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+const isPlasmicEditor =
+  typeof window !== 'undefined' && window.__PLASMIC_PREVIEW__ === true;
+
+/* ========================================= */
 
 export default function PrizeScratchCard(props) {
   const {
@@ -43,10 +50,6 @@ export default function PrizeScratchCard(props) {
   const [showPopup, setShowPopup] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  /* ✅ OFFICIAL PLASMIC PREVIEW FLAG */
-  const isPlasmicPreview =
-    typeof window !== 'undefined' && !!window.__PLASMIC_PREVIEW__;
-
   /* ================= FETCH PRIZE ================= */
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -56,8 +59,8 @@ export default function PrizeScratchCard(props) {
         setLoading(true);
         setError(false);
 
-        /* ✅ PLASMIC EDITOR → SAMPLE DATA */
-        if (isPlasmicPreview) {
+        /* 🔹 ALWAYS SHOW SAMPLE IN PLASMIC */
+        if (isPlasmicEditor) {
           setPrize(PREVIEW_PRIZE);
           setLoading(false);
           return;
@@ -66,9 +69,8 @@ export default function PrizeScratchCard(props) {
         const email = localStorage.getItem('lead_email');
         const form_handle = localStorage.getItem('form_handle');
 
-        /* ❌ LIVE SITE → DO NOT SHOW SAMPLE */
         if (!email || !form_handle) {
-          throw new Error('Missing email or form_handle');
+          throw new Error('Missing localStorage data');
         }
 
         const cleanedEventId = (eventId || '').trim();
@@ -103,7 +105,7 @@ export default function PrizeScratchCard(props) {
     };
 
     fetchPrize();
-  }, [eventId, isPlasmicPreview]);
+  }, [eventId]);
 
   /* ================= SCRATCH LOGIC ================= */
   useEffect(() => {
@@ -180,12 +182,12 @@ export default function PrizeScratchCard(props) {
   /* ================= UI ================= */
   if (loading) return <p>Loading prize…</p>;
 
-  if (error)
+  if (error && !isPlasmicEditor)
     return (
       <p style={{ color: 'red', textAlign: 'center' }}>Unable to load prize</p>
     );
 
-  if (!prize) return null;
+  if (!prize && !isPlasmicEditor) return null;
 
   return (
     <>
@@ -201,7 +203,7 @@ export default function PrizeScratchCard(props) {
             background: '#fff',
           }}
         >
-          {prize.url && !imageError ? (
+          {prize?.url && !imageError ? (
             <img
               src={prize.url}
               alt={prize.title}
@@ -210,7 +212,7 @@ export default function PrizeScratchCard(props) {
             />
           ) : (
             <span style={{ fontWeight: 'bold', fontSize: 18 }}>
-              {prize.title}
+              {prize?.title}
             </span>
           )}
         </div>
