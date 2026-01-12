@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { PLASMIC } from '../plasmic-init';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
 const DEFAULT_EVENT_ID = 'fa69234d-55c1-4439-9c32-6dbfcacfb48a';
 
 /* ---------- PLASMIC PREVIEW PRIZE ---------- */
@@ -69,9 +68,7 @@ export default function PrizeScratchCard(props) {
         const email = localStorage.getItem('lead_email');
         const form_handle = localStorage.getItem('form_handle');
 
-        if (!email || !form_handle) {
-          throw new Error('Missing localStorage data');
-        }
+        if (!email || !form_handle) throw new Error('Missing localStorage');
 
         const cleanedEventId = (eventId || '').trim();
         const finalEventId =
@@ -107,12 +104,13 @@ export default function PrizeScratchCard(props) {
     fetchPrize();
   }, [eventId]);
 
-  /* ================= SCRATCH LOGIC ================= */
+  /* ================= SCRATCH LOGIC (LIVE ONLY) ================= */
   useEffect(() => {
-    if (!prize || !canvasRef.current) return;
+    if (!prize || !canvasRef.current || isPlasmicEditor) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
     canvas.width = width;
     canvas.height = height;
@@ -132,7 +130,7 @@ export default function PrizeScratchCard(props) {
 
     const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
-      const t = e.touches?.[0];
+      const t = e.touches && e.touches[0];
       return {
         x: (t ? t.clientX : e.clientX) - rect.left,
         y: (t ? t.clientY : e.clientY) - rect.top,
@@ -181,26 +179,22 @@ export default function PrizeScratchCard(props) {
 
   /* ================= UI ================= */
   if (loading) return <p>Loading prize…</p>;
-
   if (error && !isPlasmicEditor)
-    return (
-      <p style={{ color: 'red', textAlign: 'center' }}>Unable to load prize</p>
-    );
-
-  if (!prize && !isPlasmicEditor) return null;
+    return <p style={{ color: 'red' }}>Unable to load prize</p>;
 
   return (
     <>
       <div style={{ position: 'relative', width, height }}>
+        {/* PRIZE */}
         <div
           style={{
             width,
             height,
             borderRadius: 8,
+            background: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: '#fff',
           }}
         >
           {prize?.url && !imageError ? (
@@ -211,23 +205,41 @@ export default function PrizeScratchCard(props) {
               onError={() => setImageError(true)}
             />
           ) : (
-            <span style={{ fontWeight: 'bold', fontSize: 18 }}>
-              {prize?.title}
-            </span>
+            <strong>{prize?.title}</strong>
           )}
         </div>
 
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            cursor: 'pointer',
-            borderRadius: 8,
-          }}
-        />
+        {/* PLASMIC PLACEHOLDER */}
+        {isPlasmicEditor ? (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: coverColor,
+              opacity: 0.85,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontWeight: 600,
+            }}
+          >
+            Scratch Layer (Preview Only)
+          </div>
+        ) : (
+          <canvas
+            ref={canvasRef}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              cursor: 'pointer',
+              borderRadius: 8,
+            }}
+          />
+        )}
       </div>
 
+      {/* POPUP */}
       {showPopup && (
         <div
           style={{
