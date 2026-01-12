@@ -5,37 +5,36 @@ import { PLASMIC } from '../plasmic-init';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// Default fallback event ID
 const DEFAULT_EVENT_ID = 'fa69234d-55c1-4439-9c32-6dbfcacfb48a';
 
-// Preview prize for Plasmic
 const PREVIEW_PRIZE = {
   title: '🎁 Sample Prize',
   url: null,
 };
 
-// UUID validation
 const isValidUUID = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
-export default function PrizeScratchCard({
-  eventId,
-  width = 300,
-  height = 180,
-  coverColor = '#B0B0B0',
-  scratchThreshold = 60,
-  scratchBrushSize = 30,
+export default function PrizeScratchCard(props) {
+  const {
+    eventId,
+    width = 300,
+    height = 180,
+    coverColor = '#B0B0B0',
+    scratchThreshold = 60,
+    scratchBrushSize = 30,
 
-  popupTitle = 'Congratulations!',
-  popupMessage = 'You won a special prize',
-  buttonText = 'Claim Now',
-  buttonLink = '#',
+    popupTitle = 'Congratulations!',
+    popupMessage = 'You won a special prize',
+    buttonText = 'Claim Now',
+    buttonLink = '#',
 
-  buttonBgColor = '#28a745',
-  buttonTextColor = '#ffffff',
-  popupBgColor = '#ffffff',
-  showClose = true,
-}) {
+    buttonBgColor = '#28a745',
+    buttonTextColor = '#ffffff',
+    popupBgColor = '#ffffff',
+    showClose = true,
+  } = props;
+
   const canvasRef = useRef(null);
 
   const [prize, setPrize] = useState(null);
@@ -44,8 +43,11 @@ export default function PrizeScratchCard({
   const [showPopup, setShowPopup] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
+  // ✅ Stronger Plasmic detection
   const isPlasmicPreview =
-    typeof window !== 'undefined' && window.__PLASMIC_PREVIEW__;
+    typeof window !== 'undefined' &&
+    (window.__PLASMIC_PREVIEW__ ||
+      window.location?.hostname?.includes('plasmic'));
 
   /* ================= FETCH PRIZE ================= */
   useEffect(() => {
@@ -56,18 +58,12 @@ export default function PrizeScratchCard({
         setLoading(true);
         setError(false);
 
-        // 👉 Plasmic preview → fake prize
-        if (isPlasmicPreview) {
-          setPrize(PREVIEW_PRIZE);
-          setLoading(false);
-          return;
-        }
-
         const email = localStorage.getItem('lead_email');
         const form_handle = localStorage.getItem('form_handle');
 
-        if (!email || !form_handle) {
-          setError(true);
+        // ✅ PREVIEW MODE (Plasmic OR missing data)
+        if (isPlasmicPreview || !email || !form_handle) {
+          setPrize(PREVIEW_PRIZE);
           setLoading(false);
           return;
         }
@@ -179,7 +175,7 @@ export default function PrizeScratchCard({
     };
   }, [prize, width, height, coverColor, scratchThreshold, scratchBrushSize]);
 
-  /* ================= UI STATES ================= */
+  /* ================= UI ================= */
   if (loading) return <p>Loading prize…</p>;
 
   if (error && !isPlasmicPreview)
@@ -192,7 +188,6 @@ export default function PrizeScratchCard({
   return (
     <>
       <div style={{ position: 'relative', width, height }}>
-        {/* Prize hidden until scratch */}
         <div
           style={{
             width,
@@ -205,7 +200,7 @@ export default function PrizeScratchCard({
           }}
         >
           {prize.url ? (
-            <imgage
+            <img
               src={prize.url}
               alt={prize.title}
               style={{ width, height, borderRadius: 8 }}
@@ -302,7 +297,7 @@ PLASMIC.registerComponent(PrizeScratchCard, {
     coverColor: { type: 'color', defaultValue: '#B0B0B0' },
     scratchThreshold: { type: 'number', defaultValue: 60 },
     scratchBrushSize: { type: 'number', defaultValue: 30 },
-    popupTitle: { type: 'string', defaultValue: '🎉 Congratulations!' },
+    popupTitle: { type: 'string', defaultValue: 'Congratulations!' },
     popupMessage: { type: 'string', defaultValue: 'You won a special prize!' },
     popupBgColor: { type: 'color', defaultValue: '#ffffff' },
     showClose: { type: 'boolean', defaultValue: true },
