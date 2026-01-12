@@ -110,15 +110,21 @@ function QuizFlow({
     try {
       const formData = new FormData();
 
-      // REQUIRED BY API
-      formData.append('form_handle', 'redstripe_metro_lead_form_2025');
-
-      // EMAIL FROM localStorage
+      // EMAIL & FORM HANDLE FROM localStorage
       const storedEmail =
         typeof window !== 'undefined' ? localStorage.getItem('lead_email') : '';
 
+      const storedFormHandle =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('form_handle')
+          : '';
+
       if (storedEmail) {
         formData.append('email', storedEmail);
+      }
+
+      if (storedFormHandle) {
+        formData.append('form_handle', storedFormHandle);
       }
 
       // answers[question_id] = option_id

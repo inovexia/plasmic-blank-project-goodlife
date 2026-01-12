@@ -142,7 +142,7 @@ export default function PlasmicRecaptcha({
 }
 
 PLASMIC.registerComponent(PlasmicRecaptcha, {
-  name: 'Google Recaptcha',
+  name: 'Recaptcha',
   props: {
     siteKey: {
       type: 'string',
