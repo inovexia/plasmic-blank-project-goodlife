@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { PLASMIC } from '../plasmic-init';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 /* ---------------- NORMALIZE QUESTIONS ---------------- */
 function normalizeQuestions(questions = []) {
   return questions.map((q, qIndex) => ({

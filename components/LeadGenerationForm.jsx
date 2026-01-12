@@ -125,7 +125,7 @@ function LeadGenerationForm({
        mode: 'cors',
      });
 
-     // ✅ SAFE RESPONSE PARSING
+     // SAFE RESPONSE PARSING
      const rawText = await res.text();
      let data = null;
 
@@ -157,12 +157,15 @@ function LeadGenerationForm({
        return;
      }
 
-     // ✅ SAVE EMAIL TO localStorage
+     // SAVE EMAIL TO localStorage
      const emailField = Object.values(form.fields).find((f) =>
        f.validate?.includes('email')
      );
      if (emailField && values[emailField.handle]) {
        localStorage.setItem('lead_email', values[emailField.handle]);
+     }
+     if (formHandle) {
+       localStorage.setItem('form_handle', formHandle);
      }
 
      setSuccess(successMessage);

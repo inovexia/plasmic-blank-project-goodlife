@@ -9,10 +9,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 /* ---------------- NORMALIZE QUESTIONS ---------------- */
 function normalizeQuestions(questions = []) {
   return questions.map((q, qIndex) => ({
-    id: q.id ?? qIndex + 1, // ✅ real question id if exists
+    id: q.id ?? qIndex + 1, // real question id if exists
     question: q.question,
     options: q.answers.map((a, i) => ({
-      id: a.id ?? i, // ✅ option id (important)
+      id: a.id ?? i, // option id (important)
       label: a.choice,
       isCorrect: a.is_correct,
       feedback: a.feedback,
@@ -47,7 +47,7 @@ function QuizFlow({
   const [selected, setSelected] = useState(null);
   const [locked, setLocked] = useState(false);
 
-  // 🔑 answers[questionId] = optionId
+  // answers[questionId] = optionId
   const [answers, setAnswers] = useState({});
 
   const [loading, setLoading] = useState(true);
@@ -91,7 +91,7 @@ function QuizFlow({
     setSelected(index);
     setLocked(true);
 
-    // ✅ STORE AS answers[question_id] = option_id
+    // STORE AS answers[question_id] = option_id
     setAnswers((prev) => ({
       ...prev,
       [q.id]: q.options[index].id,
@@ -110,10 +110,10 @@ function QuizFlow({
     try {
       const formData = new FormData();
 
-      // ✅ REQUIRED BY API
+      // REQUIRED BY API
       formData.append('form_handle', 'redstripe_metro_lead_form_2025');
 
-      // ✅ EMAIL FROM localStorage
+      // EMAIL FROM localStorage
       const storedEmail =
         typeof window !== 'undefined' ? localStorage.getItem('lead_email') : '';
 
@@ -121,7 +121,7 @@ function QuizFlow({
         formData.append('email', storedEmail);
       }
 
-      // ✅ answers[question_id] = option_id
+      // answers[question_id] = option_id
       Object.entries(answers).forEach(([questionId, optionId]) => {
         formData.append(`answers[${questionId}]`, optionId);
       });
@@ -130,7 +130,6 @@ function QuizFlow({
         method: 'POST',
         body: formData,
       });
-
       router.push(redirectUrl);
     } catch {
       alert('Quiz submission failed');
