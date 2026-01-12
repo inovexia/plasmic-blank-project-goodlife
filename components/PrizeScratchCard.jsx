@@ -42,8 +42,10 @@ export default function PrizeScratchCard(props) {
   const [error, setError] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
-  // ✅ Stronger Plasmic detection
+
+  //  Stronger Plasmic detection
   const isPlasmicPreview =
     typeof window !== 'undefined' &&
     (window.__PLASMIC_PREVIEW__ ||
@@ -61,7 +63,7 @@ export default function PrizeScratchCard(props) {
         const email = localStorage.getItem('lead_email');
         const form_handle = localStorage.getItem('form_handle');
 
-        // ✅ PREVIEW MODE (Plasmic OR missing data)
+        // PREVIEW MODE (Plasmic OR missing data)
         if (isPlasmicPreview || !email || !form_handle) {
           setPrize(PREVIEW_PRIZE);
           setLoading(false);
@@ -199,11 +201,12 @@ export default function PrizeScratchCard(props) {
             background: '#fff',
           }}
         >
-          {prize.url ? (
+          {prize.url && !imageError ? (
             <img
               src={prize.url}
               alt={prize.title}
               style={{ width, height, borderRadius: 8 }}
+              onError={() => setImageError(true)}
             />
           ) : (
             <span style={{ fontWeight: 'bold', fontSize: 18 }}>
