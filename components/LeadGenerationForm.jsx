@@ -28,9 +28,11 @@ function LeadGenerationForm({
   errorMessage = 'Something wrong with form data!',
   successMessage = 'Form submitted successfully!',
 
+  errorTextColor = '#ffdddd',
+  errorFontSize = 16,
+
   redirectUrl = '',
-})
- {
+}) {
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState(null);
   const [values, setValues] = useState({});
@@ -49,7 +51,7 @@ function LeadGenerationForm({
     setFormError('');
     setSuccess('');
 
-    fetch(`${API_BASE_URL}/forms`) // keep loading form metadata from external API
+    fetch(`${API_BASE_URL}/forms`)
       .then((r) => r.json())
       .then((json) => {
         const selected = json?.data?.find((f) => f.handle === formHandle);
@@ -75,8 +77,10 @@ function LeadGenerationForm({
       const rules = field.validate || [];
 
       if (rules.includes('required')) {
-        if (field.type === 'checkboxes' ? !value : !value?.trim()) {
-          errs[field.handle] = 'Required';
+        if (field.type === 'checkboxes') {
+          if (value !== 1) errs[field.handle] = 'Required';
+        } else {
+          if (!value?.trim()) errs[field.handle] = 'Required';
         }
       }
 
@@ -94,64 +98,89 @@ function LeadGenerationForm({
   }
 
   // ---------------- SUBMIT ----------------
-  async function onSubmit(e) {
-    e.preventDefault();
+ async function onSubmit(e) {
+   e.preventDefault();
 
-    setSuccess('');
-    setFormError('');
+   setSuccess('');
+   setFormError('');
 
-    if (!validate()) return;
+   if (!validate()) return;
 
-    setLoading(true);
+   setLoading(true);
 
-    try {
-      const formPayload = new FormData();
+   try {
+     const formPayload = new FormData();
 
-      Object.entries(values).forEach(([key, value]) => {
-        formPayload.append(key, value);
-      });
+     Object.entries(values).forEach(([key, value]) => {
+       if (key === 'acceptance' || key === 'agreement') {
+         formPayload.append(key, value === 1 ? '1' : '0');
+       } else {
+         formPayload.append(key, value);
+       }
+     });
 
-      const apiUrl = `${API_BASE_URL}/form/${formHandle}/submit`;
+     const res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
+       method: 'POST',
+       body: formPayload,
+       mode: 'cors',
+     });
 
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        body: formPayload,
-        mode: 'cors',
-      });
+     // ✅ SAFE RESPONSE PARSING
+     const rawText = await res.text();
+     let data = null;
 
-      if (!res.ok) {
-        throw new Error('Form submission failed');
-      }
+     try {
+       data = rawText ? JSON.parse(rawText) : null;
+     } catch {
+       data = rawText;
+     }
 
-      setSuccess(successMessage);
-      setValues({});
-      setErrors({});
+     if (!res.ok || data?.success === false) {
+       let message = errorMessage;
 
-      // REDIRECT AFTER SUCCESS
-      if (redirectUrl) {
-        setTimeout(() => {
-          window.location.href = redirectUrl;
-        }, 500);
-      }
-    } catch (err) {
-      console.error(err);
-      setFormError(err.message || 'Form submission failed');
-    } finally {
-      setLoading(false);
-    }
-  }
+       // STRING ERROR
+       if (typeof data === 'string') {
+         message = data;
+       }
 
+       // OBJECT ERROR
+       else if (data?.message) {
+         if (typeof data.message === 'string') {
+           message = data.message;
+         } else if (typeof data.message === 'object') {
+           const first = Object.values(data.message)[0];
+           message = Array.isArray(first) ? first[0] : first;
+         }
+       }
 
+       setFormError(message);
+       return;
+     }
 
-  // helper function to read cookies if needed
-  function getCookie(name) {
-    const match = document.cookie.match(
-      new RegExp('(^| )' + name + '=([^;]+)')
-    );
-    if (match) return match[2];
-    return null;
-  }
+     // ✅ SAVE EMAIL TO localStorage
+     const emailField = Object.values(form.fields).find((f) =>
+       f.validate?.includes('email')
+     );
+     if (emailField && values[emailField.handle]) {
+       localStorage.setItem('lead_email', values[emailField.handle]);
+     }
 
+     setSuccess(successMessage);
+     setValues({});
+     setErrors({});
+
+     if (redirectUrl) {
+       setTimeout(() => {
+         window.location.href = redirectUrl;
+       }, 500);
+     }
+   } catch (err) {
+     console.error(err);
+     setFormError('Form submission failed');
+   } finally {
+     setLoading(false);
+   }
+ }
 
 
   const buttonAlignmentMap = {
@@ -238,11 +267,11 @@ function LeadGenerationForm({
                   >
                     <input
                       type='checkbox'
-                      checked={!!values[field.handle]}
+                      checked={values[field.handle] === 1}
                       onChange={(e) =>
                         setValues({
                           ...values,
-                          [field.handle]: e.target.checked,
+                          [field.handle]: e.target.checked ? 1 : 0,
                         })
                       }
                     />
@@ -283,6 +312,19 @@ function LeadGenerationForm({
           </button>
         </div>
 
+        {/* ERROR MESSAGE BELOW BUTTON */}
+        {formError && (
+          <div
+            style={{
+              marginTop: 12,
+              color: errorTextColor,
+              fontSize: errorFontSize,
+            }}
+          >
+            {formError}
+          </div>
+        )}
+
         {success && (
           <div style={{ marginTop: 16, color: '#aaffaa' }}>{success}</div>
         )}
@@ -319,7 +361,6 @@ PLASMIC.registerComponent(LeadGenerationForm, {
   },
 
   props: {
-    /* ---------- FORM SETTINGS ---------- */
     formHandle: {
       type: 'string',
       defaultValue: 'redstripe_metro_lead_form_2025',
@@ -335,19 +376,26 @@ PLASMIC.registerComponent(LeadGenerationForm, {
       defaultValue: 'Form submitted successfully!',
       propGroup: 'formSettings',
     },
+    errorTextColor: {
+      type: 'color',
+      defaultValue: '#ffdddd',
+      propGroup: 'formSettings',
+    },
+    errorFontSize: {
+      type: 'number',
+      defaultValue: 16,
+      propGroup: 'formSettings',
+    },
     redirectUrl: {
       type: 'string',
       defaultValue: '',
       propGroup: 'formSettings',
-      description: 'Redirect user after successful form submission',
     },
     padding: {
       type: 'string',
       defaultValue: '40px',
       propGroup: 'formSettings',
     },
-
-    /* ---------- INPUT FIELD SETTINGS ---------- */
     inputRadius: {
       type: 'number',
       defaultValue: 5,
@@ -368,8 +416,6 @@ PLASMIC.registerComponent(LeadGenerationForm, {
       defaultValue: 16,
       propGroup: 'inputSettings',
     },
-
-    /* ---------- BUTTON SETTINGS ---------- */
     submitText: {
       type: 'string',
       defaultValue: 'Submit',
@@ -398,8 +444,5 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     },
   },
 });
-
-
-
 
 export default LeadGenerationForm;
