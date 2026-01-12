@@ -59,7 +59,7 @@ export default function PrizeScratchCard(props) {
         setLoading(true);
         setError(false);
 
-        /* 🔹 ALWAYS SHOW SAMPLE IN PLASMIC */
+        /* ALWAYS SHOW SAMPLE IN PLASMIC */
         if (isPlasmicEditor) {
           setPrize(PREVIEW_PRIZE);
           setLoading(false);
