@@ -41,15 +41,11 @@ export default function PrizeScratchCard(props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const [revealed, setRevealed] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-
-  //  Stronger Plasmic detection
+  /* ✅ OFFICIAL PLASMIC PREVIEW FLAG */
   const isPlasmicPreview =
-    typeof window !== 'undefined' &&
-    (window.__PLASMIC_PREVIEW__ ||
-      window.location?.hostname?.includes('plasmic'));
+    typeof window !== 'undefined' && !!window.__PLASMIC_PREVIEW__;
 
   /* ================= FETCH PRIZE ================= */
   useEffect(() => {
@@ -60,14 +56,19 @@ export default function PrizeScratchCard(props) {
         setLoading(true);
         setError(false);
 
-        const email = localStorage.getItem('lead_email');
-        const form_handle = localStorage.getItem('form_handle');
-
-        // PREVIEW MODE (Plasmic OR missing data)
-        if (isPlasmicPreview || !email || !form_handle) {
+        /* ✅ PLASMIC EDITOR → SAMPLE DATA */
+        if (isPlasmicPreview) {
           setPrize(PREVIEW_PRIZE);
           setLoading(false);
           return;
+        }
+
+        const email = localStorage.getItem('lead_email');
+        const form_handle = localStorage.getItem('form_handle');
+
+        /* ❌ LIVE SITE → DO NOT SHOW SAMPLE */
+        if (!email || !form_handle) {
+          throw new Error('Missing email or form_handle');
         }
 
         const cleanedEventId = (eventId || '').trim();
@@ -149,7 +150,6 @@ export default function PrizeScratchCard(props) {
       }
 
       if ((cleared / (width * height)) * 100 >= scratchThreshold) {
-        setRevealed(true);
         setShowPopup(true);
       }
     };
@@ -180,9 +180,9 @@ export default function PrizeScratchCard(props) {
   /* ================= UI ================= */
   if (loading) return <p>Loading prize…</p>;
 
-  if (error && !isPlasmicPreview)
+  if (error)
     return (
-      <p style={{ color: 'red', textAlign: 'center' }}>Something went wrong</p>
+      <p style={{ color: 'red', textAlign: 'center' }}>Unable to load prize</p>
     );
 
   if (!prize) return null;
