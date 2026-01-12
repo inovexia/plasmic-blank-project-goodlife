@@ -8,7 +8,13 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 // Default fallback event ID
 const DEFAULT_EVENT_ID = 'fa69234d-55c1-4439-9c32-6dbfcacfb48a';
 
-// UUID validation (very important)
+// Preview prize for Plasmic
+const PREVIEW_PRIZE = {
+  title: '🎁 Sample Prize',
+  url: null,
+};
+
+// UUID validation
 const isValidUUID = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
@@ -36,10 +42,13 @@ export default function PrizeScratchCard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+
+  const isPlasmicPreview =
+    typeof window !== 'undefined' && window.__PLASMIC_PREVIEW__;
 
   /* ================= FETCH PRIZE ================= */
   useEffect(() => {
-    // Run ONLY on client
     if (typeof window === 'undefined') return;
 
     const fetchPrize = async () => {
@@ -47,19 +56,23 @@ export default function PrizeScratchCard({
         setLoading(true);
         setError(false);
 
-        const email = localStorage.getItem('lead_email');
-        const form_handle = localStorage.getItem('form_handle');
-
-        // In Plasmic preview → do not error
-        if (!email || !form_handle) {
-          console.warn('Preview mode: missing email or form_handle');
+        // 👉 Plasmic preview → fake prize
+        if (isPlasmicPreview) {
+          setPrize(PREVIEW_PRIZE);
           setLoading(false);
           return;
         }
 
-        // 🧼 SANITIZE EVENT ID
-        const cleanedEventId = (eventId || '').trim();
+        const email = localStorage.getItem('lead_email');
+        const form_handle = localStorage.getItem('form_handle');
 
+        if (!email || !form_handle) {
+          setError(true);
+          setLoading(false);
+          return;
+        }
+
+        const cleanedEventId = (eventId || '').trim();
         const finalEventId =
           cleanedEventId && isValidUUID(cleanedEventId)
             ? cleanedEventId
@@ -71,15 +84,11 @@ export default function PrizeScratchCard({
           body: JSON.stringify({ email, form_handle }),
         });
 
-        if (!res.ok) {
-          throw new Error(`API failed: ${res.status}`);
-        }
+        if (!res.ok) throw new Error('API failed');
 
         const data = await res.json();
-
-        if (!data?.success || !data?.payload) {
+        if (!data?.success || !data?.payload)
           throw new Error('Invalid API response');
-        }
 
         setPrize({
           title: data.payload.title,
@@ -95,7 +104,7 @@ export default function PrizeScratchCard({
     };
 
     fetchPrize();
-  }, [eventId]);
+  }, [eventId, isPlasmicPreview]);
 
   /* ================= SCRATCH LOGIC ================= */
   useEffect(() => {
@@ -130,6 +139,7 @@ export default function PrizeScratchCard({
     };
 
     const down = () => (isDrawing = true);
+
     const up = () => {
       isDrawing = false;
 
@@ -141,6 +151,7 @@ export default function PrizeScratchCard({
       }
 
       if ((cleared / (width * height)) * 100 >= scratchThreshold) {
+        setRevealed(true);
         setShowPopup(true);
       }
     };
@@ -171,7 +182,7 @@ export default function PrizeScratchCard({
   /* ================= UI STATES ================= */
   if (loading) return <p>Loading prize…</p>;
 
-  if (error)
+  if (error && !isPlasmicPreview)
     return (
       <p style={{ color: 'red', textAlign: 'center' }}>Something went wrong</p>
     );
@@ -181,29 +192,30 @@ export default function PrizeScratchCard({
   return (
     <>
       <div style={{ position: 'relative', width, height }}>
-        {prize.url ? (
-          <img
-            src={prize.url}
-            alt={prize.title}
-            style={{ width, height, borderRadius: 8 }}
-          />
-        ) : (
-          <div
-            style={{
-              width,
-              height,
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 'bold',
-              fontSize: 18,
-              background: '#fff',
-            }}
-          >
-            {prize.title}
-          </div>
-        )}
+        {/* Prize hidden until scratch */}
+        <div
+          style={{
+            width,
+            height,
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#fff',
+          }}
+        >
+          {prize.url ? (
+            <imgage
+              src={prize.url}
+              alt={prize.title}
+              style={{ width, height, borderRadius: 8 }}
+            />
+          ) : (
+            <span style={{ fontWeight: 'bold', fontSize: 18 }}>
+              {prize.title}
+            </span>
+          )}
+        </div>
 
         <canvas
           ref={canvasRef}
@@ -284,12 +296,7 @@ export default function PrizeScratchCard({
 PLASMIC.registerComponent(PrizeScratchCard, {
   name: 'Prize Scratch Card',
   props: {
-    eventId: {
-      type: 'string',
-      displayName: 'Event ID',
-      description:
-        'Optional UUID. Extra spaces are auto-fixed. If empty, default event is used.',
-    },
+    eventId: { type: 'string' },
     width: { type: 'number', defaultValue: 300 },
     height: { type: 'number', defaultValue: 180 },
     coverColor: { type: 'color', defaultValue: '#B0B0B0' },
