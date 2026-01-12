@@ -6,7 +6,7 @@ import { PLASMIC } from '../plasmic-init';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const DEFAULT_EVENT_ID = 'fa69234d-55c1-4439-9c32-6dbfcacfb48a';
 
-/* ---------- PLASMIC PREVIEW PRIZE ---------- */
+/* ---------- PREVIEW PRIZE ---------- */
 const PREVIEW_PRIZE = {
   title: '🎁 Sample Prize',
   url: null,
@@ -17,9 +17,9 @@ const isValidUUID = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 const isPlasmicEditor =
-  typeof window !== 'undefined' && window.__PLASMIC_PREVIEW__ === true;
-
-/* ========================================= */
+  typeof window !== 'undefined' &&
+  (window.__PLASMIC_PREVIEW__ ||
+    window.location?.hostname?.includes('plasmic'));
 
 export default function PrizeScratchCard(props) {
   const {
@@ -29,12 +29,10 @@ export default function PrizeScratchCard(props) {
     coverColor = '#B0B0B0',
     scratchThreshold = 60,
     scratchBrushSize = 30,
-
     popupTitle = 'Congratulations!',
     popupMessage = 'You won a special prize',
     buttonText = 'Claim Now',
     buttonLink = '#',
-
     buttonBgColor = '#28a745',
     buttonTextColor = '#ffffff',
     popupBgColor = '#ffffff',
@@ -43,32 +41,22 @@ export default function PrizeScratchCard(props) {
 
   const canvasRef = useRef(null);
 
-  const [prize, setPrize] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [prize, setPrize] = useState(PREVIEW_PRIZE);
   const [showPopup, setShowPopup] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  /* ================= FETCH PRIZE ================= */
+  /* ================= FETCH PRIZE (LIVE ONLY) ================= */
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (isPlasmicEditor || typeof window === 'undefined') {
+      setPrize(PREVIEW_PRIZE);
+      return;
+    }
 
     const fetchPrize = async () => {
       try {
-        setLoading(true);
-        setError(false);
-
-        /* ALWAYS SHOW SAMPLE IN PLASMIC */
-        if (isPlasmicEditor) {
-          setPrize(PREVIEW_PRIZE);
-          setLoading(false);
-          return;
-        }
-
         const email = localStorage.getItem('lead_email');
         const form_handle = localStorage.getItem('form_handle');
-
-        if (!email || !form_handle) throw new Error('Missing localStorage');
+        if (!email || !form_handle) return;
 
         const cleanedEventId = (eventId || '').trim();
         const finalEventId =
@@ -82,22 +70,15 @@ export default function PrizeScratchCard(props) {
           body: JSON.stringify({ email, form_handle }),
         });
 
-        if (!res.ok) throw new Error('API failed');
-
         const data = await res.json();
-        if (!data?.success || !data?.payload)
-          throw new Error('Invalid API response');
+        if (!data?.success || !data?.payload) return;
 
         setPrize({
           title: data.payload.title,
           url: data.payload.url || null,
         });
-      } catch (err) {
-        console.error('Prize API error:', err);
-        setError(true);
-        setPrize(null);
-      } finally {
-        setLoading(false);
+      } catch (e) {
+        console.error(e);
       }
     };
 
@@ -106,7 +87,7 @@ export default function PrizeScratchCard(props) {
 
   /* ================= SCRATCH LOGIC (LIVE ONLY) ================= */
   useEffect(() => {
-    if (!prize || !canvasRef.current || isPlasmicEditor) return;
+    if (isPlasmicEditor || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -115,12 +96,11 @@ export default function PrizeScratchCard(props) {
     canvas.width = width;
     canvas.height = height;
 
-    ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = coverColor;
     ctx.fillRect(0, 0, width, height);
     ctx.globalCompositeOperation = 'destination-out';
 
-    let isDrawing = false;
+    let drawing = false;
 
     const scratch = (x, y) => {
       ctx.beginPath();
@@ -137,25 +117,18 @@ export default function PrizeScratchCard(props) {
       };
     };
 
-    const down = () => (isDrawing = true);
-
+    const down = () => (drawing = true);
     const up = () => {
-      isDrawing = false;
-
+      drawing = false;
       const pixels = ctx.getImageData(0, 0, width, height).data;
       let cleared = 0;
-
-      for (let i = 3; i < pixels.length; i += 4) {
-        if (pixels[i] === 0) cleared++;
-      }
-
-      if ((cleared / (width * height)) * 100 >= scratchThreshold) {
+      for (let i = 3; i < pixels.length; i += 4) if (pixels[i] === 0) cleared++;
+      if ((cleared / (width * height)) * 100 >= scratchThreshold)
         setShowPopup(true);
-      }
     };
 
     const move = (e) => {
-      if (!isDrawing) return;
+      if (!drawing) return;
       const { x, y } = getPos(e);
       scratch(x, y);
     };
@@ -175,17 +148,13 @@ export default function PrizeScratchCard(props) {
       canvas.removeEventListener('touchend', up);
       canvas.removeEventListener('touchmove', move);
     };
-  }, [prize, width, height, coverColor, scratchThreshold, scratchBrushSize]);
+  }, [width, height, scratchBrushSize, scratchThreshold]);
 
-  /* ================= UI ================= */
-  if (loading) return <p>Loading prize…</p>;
-  if (error && !isPlasmicEditor)
-    return <p style={{ color: 'red' }}>Unable to load prize</p>;
-
+  /* ================= UI (ALWAYS RENDER) ================= */
   return (
     <>
       <div style={{ position: 'relative', width, height }}>
-        {/* PRIZE */}
+        {/* Prize */}
         <div
           style={{
             width,
@@ -195,9 +164,10 @@ export default function PrizeScratchCard(props) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            fontWeight: 600,
           }}
         >
-          {prize?.url && !imageError ? (
+          {prize.url && !imageError ? (
             <img
               src={prize.url}
               alt={prize.title}
@@ -205,11 +175,11 @@ export default function PrizeScratchCard(props) {
               onError={() => setImageError(true)}
             />
           ) : (
-            <strong>{prize?.title}</strong>
+            prize.title
           )}
         </div>
 
-        {/* PLASMIC PLACEHOLDER */}
+        {/* Scratch Layer */}
         {isPlasmicEditor ? (
           <div
             style={{
@@ -217,6 +187,7 @@ export default function PrizeScratchCard(props) {
               inset: 0,
               background: coverColor,
               opacity: 0.85,
+              borderRadius: 8,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -224,7 +195,7 @@ export default function PrizeScratchCard(props) {
               fontWeight: 600,
             }}
           >
-            Scratch Layer (Preview Only)
+            Scratch Here
           </div>
         ) : (
           <canvas
@@ -232,14 +203,14 @@ export default function PrizeScratchCard(props) {
             style={{
               position: 'absolute',
               inset: 0,
-              cursor: 'pointer',
               borderRadius: 8,
+              cursor: 'pointer',
             }}
           />
         )}
       </div>
 
-      {/* POPUP */}
+      {/* Popup */}
       {showPopup && (
         <div
           style={{
@@ -258,8 +229,8 @@ export default function PrizeScratchCard(props) {
               padding: 24,
               borderRadius: 12,
               width: 320,
-              position: 'relative',
               textAlign: 'center',
+              position: 'relative',
             }}
           >
             {showClose && (
@@ -269,28 +240,24 @@ export default function PrizeScratchCard(props) {
                   position: 'absolute',
                   top: 10,
                   right: 10,
+                  background: 'none',
                   border: 'none',
-                  background: 'transparent',
                   fontSize: 20,
-                  cursor: 'pointer',
                 }}
               >
                 ✕
               </button>
             )}
-
             <h2>{popupTitle}</h2>
             <p>{popupMessage}</p>
-
             <a href={buttonLink} target='_blank' rel='noopener noreferrer'>
               <button
                 style={{
-                  marginTop: 16,
+                  background: buttonBgColor,
+                  color: buttonTextColor,
                   padding: '10px 20px',
                   borderRadius: 6,
                   border: 'none',
-                  background: buttonBgColor,
-                  color: buttonTextColor,
                   cursor: 'pointer',
                 }}
               >
@@ -314,13 +281,13 @@ PLASMIC.registerComponent(PrizeScratchCard, {
     coverColor: { type: 'color', defaultValue: '#B0B0B0' },
     scratchThreshold: { type: 'number', defaultValue: 60 },
     scratchBrushSize: { type: 'number', defaultValue: 30 },
-    popupTitle: { type: 'string', defaultValue: 'Congratulations!' },
-    popupMessage: { type: 'string', defaultValue: 'You won a special prize!' },
-    popupBgColor: { type: 'color', defaultValue: '#ffffff' },
+    popupTitle: { type: 'string' },
+    popupMessage: { type: 'string' },
+    popupBgColor: { type: 'color' },
     showClose: { type: 'boolean', defaultValue: true },
-    buttonText: { type: 'string', defaultValue: 'Claim Now' },
+    buttonText: { type: 'string' },
     buttonLink: { type: 'href' },
-    buttonBgColor: { type: 'color', defaultValue: '#28a745' },
-    buttonTextColor: { type: 'color', defaultValue: '#ffffff' },
+    buttonBgColor: { type: 'color' },
+    buttonTextColor: { type: 'color' },
   },
 });
