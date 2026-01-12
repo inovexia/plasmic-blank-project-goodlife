@@ -9,10 +9,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 /* ---------------- NORMALIZE QUESTIONS ---------------- */
 function normalizeQuestions(questions = []) {
   return questions.map((q, qIndex) => ({
-    id: qIndex + 1,
+    id: q.id ?? qIndex + 1, // ✅ real question id if exists
     question: q.question,
     options: q.answers.map((a, i) => ({
-      id: i,
+      id: a.id ?? i, // ✅ option id (important)
       label: a.choice,
       isCorrect: a.is_correct,
       feedback: a.feedback,
@@ -23,7 +23,6 @@ function normalizeQuestions(questions = []) {
 function QuizFlow({
   quizId,
   redirectUrl = '/quiz-result',
-  email = 'johndoe@gmail.com',
 
   questionFontSize = 48,
   questionColor = '#ffffff',
@@ -47,7 +46,10 @@ function QuizFlow({
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [locked, setLocked] = useState(false);
+
+  // 🔑 answers[questionId] = optionId
   const [answers, setAnswers] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -89,12 +91,10 @@ function QuizFlow({
     setSelected(index);
     setLocked(true);
 
+    // ✅ STORE AS answers[question_id] = option_id
     setAnswers((prev) => ({
       ...prev,
-      [q.id]: {
-        question: q.question,
-        answer: q.options[index].label,
-      },
+      [q.id]: q.options[index].id,
     }));
   }
 
@@ -109,11 +109,21 @@ function QuizFlow({
 
     try {
       const formData = new FormData();
-      formData.append('email', email);
 
-      Object.keys(answers).forEach((key) => {
-        formData.append(`response[${key}][question]`, answers[key].question);
-        formData.append(`response[${key}][answer]`, answers[key].answer);
+      // ✅ REQUIRED BY API
+      formData.append('form_handle', 'redstripe_metro_lead_form_2025');
+
+      // ✅ EMAIL FROM localStorage
+      const storedEmail =
+        typeof window !== 'undefined' ? localStorage.getItem('lead_email') : '';
+
+      if (storedEmail) {
+        formData.append('email', storedEmail);
+      }
+
+      // ✅ answers[question_id] = option_id
+      Object.entries(answers).forEach(([questionId, optionId]) => {
+        formData.append(`answers[${questionId}]`, optionId);
       });
 
       await fetch(`${API_BASE_URL}/quiz/${quizId}/submit`, {
@@ -130,7 +140,6 @@ function QuizFlow({
   /* ---------------- UI ---------------- */
   return (
     <div style={{ padding: 40, textAlign: 'center' }}>
-      {/* INLINE RESPONSIVE CSS */}
       <style>{`
         .quiz-grid {
           display: grid;
@@ -148,7 +157,6 @@ function QuizFlow({
         }
       `}</style>
 
-      {/* QUESTION */}
       <h2
         style={{
           fontSize: questionFontSize,
@@ -159,13 +167,12 @@ function QuizFlow({
         {q.question}
       </h2>
 
-      {/* OPTIONS + FEEDBACK ROW */}
       <div className='quiz-grid'>
         {/* OPTIONS */}
         <div style={{ textAlign: 'left' }}>
           {q.options.map((opt, i) => (
             <label
-              key={i}
+              key={opt.id}
               style={{
                 display: 'flex',
                 gap: 10,
@@ -219,7 +226,6 @@ function QuizFlow({
         </div>
       </div>
 
-      {/* BUTTON */}
       {selected !== null && (
         <button
           onClick={handleNext}
@@ -245,7 +251,6 @@ PLASMIC.registerComponent(QuizFlow, {
   props: {
     quizId: { type: 'string' },
     redirectUrl: { type: 'string', defaultValue: '/quiz-result' },
-    email: { type: 'string', defaultValue: 'johndoe@gmail.com' },
 
     questionFontSize: { type: 'number' },
     questionColor: { type: 'color' },
