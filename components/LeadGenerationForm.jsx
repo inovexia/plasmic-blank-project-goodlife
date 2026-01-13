@@ -5,6 +5,26 @@ import { PLASMIC } from '../plasmic-init';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+/* ---------- EDITOR MESSAGE ---------- */
+function MissingFormHandle() {
+  return (
+    <div
+      style={{
+        padding: '16px',
+        border: '1px dashed #ff9800',
+        background: '#fff7e6',
+        color: '#e65100',
+        fontSize: 14,
+        borderRadius: 4,
+      }}
+    >
+      ⚠️ <strong>Form Handle is required</strong>
+      <br />
+      Please add <code>formHandle</code> from the Form settings panel.
+    </div>
+  );
+}
+
 function LeadGenerationForm({
   /* ---------- FORM ---------- */
   formHandle,
@@ -138,9 +158,9 @@ function LeadGenerationForm({
 
     try {
       const formPayload = new FormData();
-      Object.entries(values).forEach(([key, value]) => {
-        formPayload.append(key, value);
-      });
+      Object.entries(values).forEach(([key, value]) =>
+        formPayload.append(key, value)
+      );
 
       const res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
         method: 'POST',
@@ -176,7 +196,14 @@ function LeadGenerationForm({
     right: 'flex-end',
   };
 
-  if (!mounted || !form) return null;
+  /* ---------- VISIBILITY FIX ---------- */
+  if (!mounted) return null;
+
+  if (!formHandle) {
+    return <MissingFormHandle />;
+  }
+
+  if (!form) return null;
 
   return (
     <section style={{ width: '100%', padding, color: textColor }}>
@@ -360,10 +387,9 @@ function LeadGenerationForm({
   );
 }
 
-/* ---------- PLASMIC REGISTER (ALL PROPS) ---------- */
+/* ---------- PLASMIC REGISTER (ALL PROPS — VERIFIED) ---------- */
 PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
-
   propGroups: {
     form: { name: 'Form' },
     label: { name: 'Label' },
@@ -373,260 +399,70 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     error: { name: 'Error Message' },
     success: { name: 'Success Message' },
   },
-
   props: {
-    /* ---------- FORM ---------- */
-    formHandle: {
-      type: 'string',
-      defaultValue: 'demo_lead_form', // 🔑 REQUIRED FOR VISIBILITY
-      propGroup: 'form',
-    },
-    submitText: {
-      type: 'string',
-      defaultValue: 'Submit',
-      propGroup: 'form',
-    },
-    padding: {
-      type: 'string',
-      defaultValue: '40px',
-      propGroup: 'form',
-    },
-    fieldGap: {
-      type: 'number',
-      defaultValue: 16,
-      propGroup: 'form',
-    },
-    redirectUrl: {
-      type: 'string',
-      defaultValue: '',
-      propGroup: 'form',
-    },
+    /* 🔒 EXACT MATCH WITH COMPONENT PROPS */
+    formHandle: { type: 'string', propGroup: 'form' },
+    submitText: { type: 'string', propGroup: 'form' },
+    padding: { type: 'string', propGroup: 'form' },
+    fieldGap: { type: 'number', propGroup: 'form' },
+    redirectUrl: { type: 'string', propGroup: 'form' },
 
-    /* ---------- LABEL ---------- */
-    labelFontFamily: {
-      type: 'string',
-      defaultValue: 'inherit',
-      propGroup: 'label',
-    },
-    labelFontSize: {
-      type: 'number',
-      defaultValue: 14,
-      propGroup: 'label',
-    },
-    labelFontWeight: {
-      type: 'number',
-      defaultValue: 400,
-      propGroup: 'label',
-    },
-    labelColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'label',
-    },
-    labelPadding: {
-      type: 'string',
-      defaultValue: '0',
-      propGroup: 'label',
-    },
-    labelMargin: {
-      type: 'string',
-      defaultValue: '0 0 6px 0',
-      propGroup: 'label',
-    },
+    labelFontFamily: { type: 'string', propGroup: 'label' },
+    labelFontSize: { type: 'number', propGroup: 'label' },
+    labelFontWeight: { type: 'number', propGroup: 'label' },
+    labelColor: { type: 'color', propGroup: 'label' },
+    labelPadding: { type: 'string', propGroup: 'label' },
+    labelMargin: { type: 'string', propGroup: 'label' },
 
-    /* ---------- INPUT ---------- */
-    inputFontFamily: {
-      type: 'string',
-      defaultValue: 'inherit',
-      propGroup: 'input',
-    },
-    inputFontSize: {
-      type: 'number',
-      defaultValue: 14,
-      propGroup: 'input',
-    },
-    inputFontWeight: {
-      type: 'number',
-      defaultValue: 400,
-      propGroup: 'input',
-    },
-    inputTextColor: {
-      type: 'color',
-      defaultValue: '#000000',
-      propGroup: 'input',
-    },
-    inputBgColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'input',
-    },
-    inputPadding: {
-      type: 'string',
-      defaultValue: '6px 10px',
-      propGroup: 'input',
-    },
-    inputMargin: {
-      type: 'string',
-      defaultValue: '0',
-      propGroup: 'input',
-    },
-    inputHeight: {
-      type: 'number',
-      defaultValue: 38,
-      propGroup: 'input',
-    },
-    inputRadius: {
-      type: 'number',
-      defaultValue: 2,
-      propGroup: 'input',
-    },
-    inputBorderSize: {
-      type: 'number',
-      defaultValue: 1,
-      propGroup: 'input',
-    },
-    inputBorderColor: {
-      type: 'color',
-      defaultValue: '#cccccc',
-      propGroup: 'input',
-    },
+    inputFontFamily: { type: 'string', propGroup: 'input' },
+    inputFontSize: { type: 'number', propGroup: 'input' },
+    inputFontWeight: { type: 'number', propGroup: 'input' },
+    inputTextColor: { type: 'color', propGroup: 'input' },
+    inputBgColor: { type: 'color', propGroup: 'input' },
+    inputPadding: { type: 'string', propGroup: 'input' },
+    inputMargin: { type: 'string', propGroup: 'input' },
+    inputHeight: { type: 'number', propGroup: 'input' },
+    inputRadius: { type: 'number', propGroup: 'input' },
+    inputBorderSize: { type: 'number', propGroup: 'input' },
+    inputBorderColor: { type: 'color', propGroup: 'input' },
 
-    /* ---------- CHECKBOX ---------- */
     checkboxAlign: {
       type: 'choice',
       options: ['flex-start', 'center'],
-      defaultValue: 'flex-start',
       propGroup: 'checkbox',
     },
 
-    /* ---------- BUTTON ---------- */
-    buttonBgColor: {
-      type: 'color',
-      defaultValue: 'transparent',
-      propGroup: 'button',
-    },
-    buttonTextColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'button',
-    },
-    buttonTextSize: {
-      type: 'number',
-      defaultValue: 14,
-      propGroup: 'button',
-    },
-    buttonBorderSize: {
-      type: 'number',
-      defaultValue: 1,
-      propGroup: 'button',
-    },
-    buttonBorderColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'button',
-    },
-    buttonRadius: {
-      type: 'number',
-      defaultValue: 2,
-      propGroup: 'button',
-    },
-    buttonPadding: {
-      type: 'string',
-      defaultValue: '8px 28px',
-      propGroup: 'button',
-    },
+    buttonBgColor: { type: 'color', propGroup: 'button' },
+    buttonTextColor: { type: 'color', propGroup: 'button' },
+    buttonTextSize: { type: 'number', propGroup: 'button' },
+    buttonBorderSize: { type: 'number', propGroup: 'button' },
+    buttonBorderColor: { type: 'color', propGroup: 'button' },
+    buttonRadius: { type: 'number', propGroup: 'button' },
+    buttonPadding: { type: 'string', propGroup: 'button' },
     buttonAlign: {
       type: 'choice',
       options: ['left', 'center', 'right'],
-      defaultValue: 'center',
       propGroup: 'button',
     },
-    buttonHoverBg: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'button',
-    },
-    buttonHoverText: {
-      type: 'color',
-      defaultValue: '#000000',
-      propGroup: 'button',
-    },
+    buttonHoverBg: { type: 'color', propGroup: 'button' },
+    buttonHoverText: { type: 'color', propGroup: 'button' },
 
-    /* ---------- ERROR ---------- */
-    errorMessage: {
-      type: 'string',
-      defaultValue: 'Something wrong with form data!',
-      propGroup: 'error',
-    },
-    errorFontFamily: {
-      type: 'string',
-      defaultValue: 'inherit',
-      propGroup: 'error',
-    },
-    errorFontSize: {
-      type: 'number',
-      defaultValue: 16,
-      propGroup: 'error',
-    },
-    errorFontWeight: {
-      type: 'number',
-      defaultValue: 400,
-      propGroup: 'error',
-    },
-    errorTextColor: {
-      type: 'color',
-      defaultValue: '#ffdddd',
-      propGroup: 'error',
-    },
-    errorPadding: {
-      type: 'string',
-      defaultValue: '0',
-      propGroup: 'error',
-    },
-    errorMargin: {
-      type: 'string',
-      defaultValue: '12px 0 0',
-      propGroup: 'error',
-    },
+    errorMessage: { type: 'string', propGroup: 'error' },
+    errorFontFamily: { type: 'string', propGroup: 'error' },
+    errorFontSize: { type: 'number', propGroup: 'error' },
+    errorFontWeight: { type: 'number', propGroup: 'error' },
+    errorTextColor: { type: 'color', propGroup: 'error' },
+    errorPadding: { type: 'string', propGroup: 'error' },
+    errorMargin: { type: 'string', propGroup: 'error' },
 
-    /* ---------- SUCCESS ---------- */
-    successMessage: {
-      type: 'string',
-      defaultValue: 'Form submitted successfully!',
-      propGroup: 'success',
-    },
-    successFontFamily: {
-      type: 'string',
-      defaultValue: 'inherit',
-      propGroup: 'success',
-    },
-    successFontSize: {
-      type: 'number',
-      defaultValue: 16,
-      propGroup: 'success',
-    },
-    successFontWeight: {
-      type: 'number',
-      defaultValue: 400,
-      propGroup: 'success',
-    },
-    successTextColor: {
-      type: 'color',
-      defaultValue: '#aaffaa',
-      propGroup: 'success',
-    },
-    successPadding: {
-      type: 'string',
-      defaultValue: '0',
-      propGroup: 'success',
-    },
-    successMargin: {
-      type: 'string',
-      defaultValue: '16px 0 0',
-      propGroup: 'success',
-    },
+    successMessage: { type: 'string', propGroup: 'success' },
+    successFontFamily: { type: 'string', propGroup: 'success' },
+    successFontSize: { type: 'number', propGroup: 'success' },
+    successFontWeight: { type: 'number', propGroup: 'success' },
+    successTextColor: { type: 'color', propGroup: 'success' },
+    successPadding: { type: 'string', propGroup: 'success' },
+    successMargin: { type: 'string', propGroup: 'success' },
   },
 });
-
 
 export default LeadGenerationForm;
