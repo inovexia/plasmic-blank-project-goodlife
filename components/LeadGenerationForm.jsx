@@ -88,7 +88,16 @@ function LeadGenerationForm({
   successPadding = '0',
   successMargin = '16px 0 0',
 
+  /* ---------- CHECKBOX TEXT ---------- */
+  checkboxTextFontFamily = 'inherit',
+  checkboxTextFontSize = 14,
+  checkboxTextFontWeight = 400,
+  checkboxTextColor = '#ffffff',
+  checkboxTextLineHeight = '1.4',
+  checkboxTextMargin = '0',
+
   /* ---------- CHECKBOX STYLE ---------- */
+
   checkboxSize = 18,
   checkboxRadius = 4,
   checkboxBg = '#ffffff',
@@ -340,7 +349,18 @@ function LeadGenerationForm({
                         pointerEvents: 'none',
                       }}
                     />
-                    <span>{field.instructions || field.display}</span>
+                    <span
+                      style={{
+                        fontFamily: checkboxTextFontFamily,
+                        fontSize: checkboxTextFontSize,
+                        fontWeight: checkboxTextFontWeight,
+                        color: checkboxTextColor,
+                        lineHeight: checkboxTextLineHeight,
+                        margin: checkboxTextMargin,
+                      }}
+                    >
+                      {field.instructions || field.display}
+                    </span>
                   </label>
                 )}
 
@@ -448,6 +468,7 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     input: { name: 'Input' },
     button: { name: 'Button' },
     checkbox: { name: 'Checkbox' },
+    checkboxText: { name: 'Checkbox Text' },
     error: { name: 'Error Message' },
     success: { name: 'Success Message' },
   },
@@ -477,6 +498,37 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     inputRadius: { type: 'number', propGroup: 'input' },
     inputBorderSize: { type: 'number', propGroup: 'input' },
     inputBorderColor: { type: 'color', propGroup: 'input' },
+
+    checkboxTextFontFamily: {
+      type: 'string',
+      defaultValue: 'inherit',
+      propGroup: 'checkboxText',
+    },
+    checkboxTextFontSize: {
+      type: 'number',
+      defaultValue: 14,
+      propGroup: 'checkboxText',
+    },
+    checkboxTextFontWeight: {
+      type: 'number',
+      defaultValue: 400,
+      propGroup: 'checkboxText',
+    },
+    checkboxTextColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      propGroup: 'checkboxText',
+    },
+    checkboxTextLineHeight: {
+      type: 'string',
+      defaultValue: '1.4',
+      propGroup: 'checkboxText',
+    },
+    checkboxTextMargin: {
+      type: 'string',
+      defaultValue: '0',
+      propGroup: 'checkboxText',
+    },
 
     checkboxAlign: {
       type: 'choice',
