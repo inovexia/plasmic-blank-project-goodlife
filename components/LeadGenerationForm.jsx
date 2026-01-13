@@ -2,64 +2,71 @@
 
 import { useEffect, useState } from 'react';
 import { PLASMIC } from '../plasmic-init';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 function LeadGenerationForm({
+  /* ---------- FORM ---------- */
   formHandle,
   submitText = 'Submit',
-
   padding = '40px',
   textColor = '#ffffff',
-
   fieldGap = 16,
+  redirectUrl = '',
 
-  /* ---------------- LABEL ---------------- */
-  labelColor = '#ffffff',
-  labelFontSize = 14,
+  /* ---------- LABEL ---------- */
   labelFontFamily = 'inherit',
+  labelFontSize = 14,
   labelFontWeight = 400,
+  labelColor = '#ffffff',
+  labelPadding = '0',
   labelMargin = '0 0 6px 0',
 
-  /* ---------------- INPUT ---------------- */
-  inputHeight = 38,
-  inputPadding = '6px 10px',
-  inputRadius = 2,
+  /* ---------- INPUT ---------- */
   inputFontFamily = 'inherit',
   inputFontSize = 14,
   inputFontWeight = 400,
   inputTextColor = '#000000',
   inputBgColor = '#ffffff',
+  inputPadding = '6px 10px',
+  inputMargin = '0',
+  inputHeight = 38,
+  inputRadius = 2,
   inputBorderSize = 1,
   inputBorderColor = '#cccccc',
 
-  /* ---------------- BUTTON ---------------- */
-  buttonTextColor = '#ffffff',
+  /* ---------- CHECKBOX ---------- */
+  checkboxAlign = 'flex-start',
+
+  /* ---------- BUTTON ---------- */
   buttonBgColor = 'transparent',
-  buttonHoverText = '#000000',
-  buttonBorderColor = '#ffffff',
+  buttonTextColor = '#ffffff',
+  buttonTextSize = 14,
   buttonBorderSize = 1,
+  buttonBorderColor = '#ffffff',
   buttonRadius = 2,
-  buttonFontSize = 14,
   buttonPadding = '8px 28px',
   buttonAlign = 'center',
-  buttonHoverBg = '',
-  buttonHoverBorderColor = '',
+  buttonHoverBg = '#ffffff',
+  buttonHoverText = '#000000',
 
-  /* ---------------- BUTTON STATE CONTROL ---------------- */
-  buttonCursor = 'pointer',
-  buttonHoverEnabled = true,
-
-  /* ---------------- MESSAGE ---------------- */
+  /* ---------- ERROR ---------- */
   errorMessage = 'Something wrong with form data!',
-  successMessage = 'Form submitted successfully!',
-  errorTextColor = '#ffdddd',
-  errorFontSize = 16,
   errorFontFamily = 'inherit',
+  errorFontSize = 16,
   errorFontWeight = 400,
-  messagePadding = '0',
-  messageMargin = '12px 0 0',
+  errorTextColor = '#ffdddd',
+  errorPadding = '0',
+  errorMargin = '12px 0 0',
 
-  redirectUrl = '',
+  /* ---------- SUCCESS ---------- */
+  successMessage = 'Form submitted successfully!',
+  successFontFamily = 'inherit',
+  successFontSize = 16,
+  successFontWeight = 400,
+  successTextColor = '#aaffaa',
+  successPadding = '0',
+  successMargin = '16px 0 0',
 }) {
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState(null);
@@ -71,9 +78,7 @@ function LeadGenerationForm({
 
   useEffect(() => setMounted(true), []);
 
-  /* ---------- EVERYTHING BELOW IS 100% YOUR ORIGINAL CODE ---------- */
-
-  // ---------------- LOAD FORM ----------------
+  /* ---------- LOAD FORM ---------- */
   useEffect(() => {
     if (!mounted || !formHandle) return;
 
@@ -85,23 +90,18 @@ function LeadGenerationForm({
       .then((r) => r.json())
       .then((json) => {
         const selected = json?.data?.find((f) => f.handle === formHandle);
-
         if (!selected) {
           setFormError(errorMessage);
           return;
         }
-
         setForm(selected);
       })
-      .catch(() => {
-        setFormError(errorMessage);
-      });
+      .catch(() => setFormError(errorMessage));
   }, [mounted, formHandle, errorMessage]);
 
-  // ---------------- VALIDATION ----------------
+  /* ---------- VALIDATION ---------- */
   function validate() {
     const errs = {};
-
     Object.values(form.fields || {}).forEach((field) => {
       const value = values[field.handle];
       const rules = field.validate || [];
@@ -109,8 +109,8 @@ function LeadGenerationForm({
       if (rules.includes('required')) {
         if (field.type === 'checkboxes') {
           if (value !== 1) errs[field.handle] = 'Required';
-        } else {
-          if (!value?.trim()) errs[field.handle] = 'Required';
+        } else if (!value?.trim()) {
+          errs[field.handle] = 'Required';
         }
       }
 
@@ -127,32 +127,19 @@ function LeadGenerationForm({
     return Object.keys(errs).length === 0;
   }
 
-  function normalizeMessage(msg) {
-    if (!msg) return '';
-    if (typeof msg === 'string') return msg;
-    if (msg instanceof Error) return msg.message;
-    if (Array.isArray(msg)) return msg.join(', ');
-    if (typeof msg === 'object') return JSON.stringify(msg);
-    return String(msg);
-  }
-
-  /* ---------------- SUBMIT ---------------- */
+  /* ---------- SUBMIT ---------- */
   async function onSubmit(e) {
     e.preventDefault();
     setSuccess('');
     setFormError('');
+
     if (!validate()) return;
     setLoading(true);
 
     try {
       const formPayload = new FormData();
-
       Object.entries(values).forEach(([key, value]) => {
-        if (key === 'acceptance' || key === 'agreement') {
-          formPayload.append(key, value === 1 ? '1' : '0');
-        } else {
-          formPayload.append(key, value);
-        }
+        formPayload.append(key, value);
       });
 
       const res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
@@ -161,60 +148,29 @@ function LeadGenerationForm({
         mode: 'cors',
       });
 
-      const rawText = await res.text();
-      let data = null;
-
-      try {
-        data = rawText ? JSON.parse(rawText) : null;
-      } catch {
-        data = rawText;
-      }
+      const raw = await res.text();
+      const data = raw ? JSON.parse(raw) : null;
 
       if (!res.ok || data?.success === false) {
-        let message = errorMessage;
-
-        if (typeof data === 'string') {
-          message = data;
-        } else if (data?.message) {
-          if (typeof data.message === 'string') {
-            message = data.message;
-          } else {
-            const first = Object.values(data.message)[0];
-            message = Array.isArray(first) ? first.join(', ') : first;
-          }
-        }
-
-        setFormError(normalizeMessage(message));
+        setFormError(errorMessage);
         return;
       }
 
-      const emailField = Object.values(form.fields).find((f) =>
-        f.validate?.includes('email')
-      );
-      if (emailField && values[emailField.handle]) {
-        localStorage.setItem('lead_email', values[emailField.handle]);
-      }
-      if (formHandle) {
-        localStorage.setItem('form_handle', formHandle);
-      }
-
-      setSuccess(normalizeMessage(successMessage));
+      setSuccess(successMessage);
       setValues({});
       setErrors({});
 
       if (redirectUrl) {
-        setTimeout(() => {
-          window.location.href = redirectUrl;
-        }, 500);
+        setTimeout(() => (window.location.href = redirectUrl), 500);
       }
-    } catch (err) {
-      setFormError(normalizeMessage(err || 'Form submission failed'));
+    } catch {
+      setFormError('Form submission failed');
     } finally {
       setLoading(false);
     }
   }
 
-  const buttonAlignmentMap = {
+  const alignMap = {
     left: 'flex-start',
     center: 'center',
     right: 'flex-end',
@@ -224,7 +180,7 @@ function LeadGenerationForm({
 
   return (
     <section style={{ width: '100%', padding, color: textColor }}>
-      <form style={{ margin: 'auto' }} onSubmit={onSubmit}>
+      <form onSubmit={onSubmit}>
         <div
           style={{
             display: 'grid',
@@ -242,12 +198,13 @@ function LeadGenerationForm({
                   <>
                     <label
                       style={{
-                        display: 'block',
-                        margin: labelMargin,
-                        color: labelColor,
-                        fontSize: labelFontSize,
                         fontFamily: labelFontFamily,
+                        fontSize: labelFontSize,
                         fontWeight: labelFontWeight,
+                        color: labelColor,
+                        padding: labelPadding,
+                        margin: labelMargin,
+                        display: 'block',
                       }}
                     >
                       {field.display}
@@ -262,21 +219,24 @@ function LeadGenerationForm({
                       }
                       value={values[field.handle] || ''}
                       onChange={(e) =>
-                        setValues({ ...values, [field.handle]: e.target.value })
+                        setValues({
+                          ...values,
+                          [field.handle]: e.target.value,
+                        })
                       }
                       style={{
                         width: '100%',
                         height: inputHeight,
-                        padding: inputPadding,
-                        borderRadius: inputRadius,
-                        border: `${inputBorderSize}px solid ${inputBorderColor}`,
                         fontFamily: inputFontFamily,
                         fontSize: inputFontSize,
                         fontWeight: inputFontWeight,
                         color: inputTextColor,
                         background: inputBgColor,
+                        padding: inputPadding,
+                        margin: inputMargin,
+                        borderRadius: inputRadius,
+                        border: `${inputBorderSize}px solid ${inputBorderColor}`,
                         outline: 'none',
-                        boxShadow: 'none',
                       }}
                     />
                   </>
@@ -284,9 +244,11 @@ function LeadGenerationForm({
                   <label
                     style={{
                       display: 'flex',
+                      alignItems: checkboxAlign,
                       gap: 10,
-                      alignItems: 'flex-start',
+                      fontFamily: labelFontFamily,
                       fontSize: labelFontSize,
+                      color: labelColor,
                     }}
                   >
                     <input
@@ -304,7 +266,14 @@ function LeadGenerationForm({
                 )}
 
                 {errors[field.handle] && (
-                  <div style={{ color: '#ffdddd', fontSize: 12 }}>
+                  <div
+                    style={{
+                      fontFamily: errorFontFamily,
+                      fontSize: errorFontSize,
+                      fontWeight: errorFontWeight,
+                      color: errorTextColor,
+                    }}
+                  >
                     {errors[field.handle]}
                   </div>
                 )}
@@ -316,7 +285,7 @@ function LeadGenerationForm({
         <div
           style={{
             display: 'flex',
-            justifyContent: buttonAlignmentMap[buttonAlign],
+            justifyContent: alignMap[buttonAlign],
             marginTop: 24,
           }}
         >
@@ -326,12 +295,11 @@ function LeadGenerationForm({
             style={{
               background: buttonBgColor,
               color: buttonTextColor,
-              border: `${buttonBorderSize}px solid ${buttonBorderColor}`,
+              fontSize: buttonTextSize,
               borderRadius: buttonRadius,
-              fontSize: buttonFontSize,
+              border: `${buttonBorderSize}px solid ${buttonBorderColor}`,
               padding: buttonPadding,
-              cursor: loading ? 'not-allowed' : buttonCursor,
-              transition: 'all 0.2s ease',
+              cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
             {loading ? 'Submitting…' : submitText}
@@ -341,14 +309,12 @@ function LeadGenerationForm({
         {formError && (
           <div
             style={{
-              margin: messageMargin,
-              padding: messagePadding,
-              color: errorTextColor,
-              fontSize: errorFontSize,
               fontFamily: errorFontFamily,
+              fontSize: errorFontSize,
               fontWeight: errorFontWeight,
-              whiteSpace: 'normal',
-              wordBreak: 'break-word',
+              color: errorTextColor,
+              padding: errorPadding,
+              margin: errorMargin,
             }}
           >
             {formError}
@@ -358,13 +324,12 @@ function LeadGenerationForm({
         {success && (
           <div
             style={{
-              margin: messageMargin,
-              padding: messagePadding,
-              fontFamily: errorFontFamily,
-              fontWeight: errorFontWeight,
-              color: '#aaffaa',
-              whiteSpace: 'normal',
-              wordBreak: 'break-word',
+              fontFamily: successFontFamily,
+              fontSize: successFontSize,
+              fontWeight: successFontWeight,
+              color: successTextColor,
+              padding: successPadding,
+              margin: successMargin,
             }}
           >
             {success}
@@ -374,32 +339,15 @@ function LeadGenerationForm({
 
       <style jsx>{`
         button:hover {
-          ${buttonHoverEnabled
-            ? `
-      background: ${buttonHoverBg};
-      color: ${buttonHoverText};
-      ${
-        buttonHoverBorderColor ? `border-color: ${buttonHoverBorderColor};` : ''
-      }
-      cursor: ${buttonCursor};
-    `
-            : ''}
-        }
-
-        button:disabled,
-        button[disabled] {
-          cursor: not-allowed !important;
-          opacity: 0.6;
+          background: ${buttonHoverBg};
+          color: ${buttonHoverText};
         }
 
         input:focus,
         input:focus-visible,
-        input:active,
-        button:focus,
-        button:focus-visible,
-        button:active {
-          outline: none !important;
-          box-shadow: none !important;
+        button:focus {
+          outline: none;
+          box-shadow: none;
         }
 
         @media (max-width: 768px) {
@@ -412,135 +360,81 @@ function LeadGenerationForm({
   );
 }
 
-
+/* ---------- PLASMIC REGISTER (ALL PROPS) ---------- */
 PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
-
   propGroups: {
-    formSettings: { name: 'Form Settings' },
-    inputSettings: { name: 'Input Field Settings' },
-    buttonSettings: { name: 'Button Style' },
+    form: { name: 'Form' },
+    label: { name: 'Label' },
+    input: { name: 'Input' },
+    button: { name: 'Button' },
+    checkbox: { name: 'Checkbox' },
+    error: { name: 'Error Message' },
+    success: { name: 'Success Message' },
   },
-
   props: {
-    formHandle: {
-      type: 'string',
-      defaultValue: 'redstripe_metro_lead_form_2025',
-      propGroup: 'formSettings',
+    formHandle: { type: 'string', propGroup: 'form' },
+    submitText: { type: 'string', propGroup: 'form' },
+    padding: { type: 'string', propGroup: 'form' },
+    fieldGap: { type: 'number', propGroup: 'form' },
+    redirectUrl: { type: 'string', propGroup: 'form' },
+
+    labelFontFamily: { type: 'string', propGroup: 'label' },
+    labelFontSize: { type: 'number', propGroup: 'label' },
+    labelFontWeight: { type: 'number', propGroup: 'label' },
+    labelColor: { type: 'color', propGroup: 'label' },
+    labelPadding: { type: 'string', propGroup: 'label' },
+    labelMargin: { type: 'string', propGroup: 'label' },
+
+    inputFontFamily: { type: 'string', propGroup: 'input' },
+    inputFontSize: { type: 'number', propGroup: 'input' },
+    inputFontWeight: { type: 'number', propGroup: 'input' },
+    inputTextColor: { type: 'color', propGroup: 'input' },
+    inputBgColor: { type: 'color', propGroup: 'input' },
+    inputPadding: { type: 'string', propGroup: 'input' },
+    inputMargin: { type: 'string', propGroup: 'input' },
+    inputHeight: { type: 'number', propGroup: 'input' },
+    inputRadius: { type: 'number', propGroup: 'input' },
+    inputBorderSize: { type: 'number', propGroup: 'input' },
+    inputBorderColor: { type: 'color', propGroup: 'input' },
+
+    checkboxAlign: {
+      type: 'choice',
+      options: ['flex-start', 'center'],
+      propGroup: 'checkbox',
     },
-    errorMessage: {
-      type: 'string',
-      defaultValue: 'Something wrong with form API',
-      propGroup: 'formSettings',
-    },
-    successMessage: {
-      type: 'string',
-      defaultValue: 'Form submitted successfully!',
-      propGroup: 'formSettings',
-    },
-    errorTextColor: {
-      type: 'color',
-      defaultValue: '#ffdddd',
-      propGroup: 'formSettings',
-    },
-    errorFontSize: {
-      type: 'number',
-      defaultValue: 16,
-      propGroup: 'formSettings',
-    },
-    redirectUrl: {
-      type: 'string',
-      defaultValue: '',
-      propGroup: 'formSettings',
-    },
-    padding: {
-      type: 'string',
-      defaultValue: '40px',
-      propGroup: 'formSettings',
-    },
-    inputRadius: {
-      type: 'number',
-      defaultValue: 5,
-      propGroup: 'inputSettings',
-    },
-    inputHeight: {
-      type: 'number',
-      defaultValue: 38,
-      propGroup: 'inputSettings',
-    },
-    labelColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'inputSettings',
-    },
-    fieldGap: {
-      type: 'number',
-      defaultValue: 16,
-      propGroup: 'inputSettings',
-    },
-    submitText: {
-      type: 'string',
-      defaultValue: 'Submit',
-      propGroup: 'buttonSettings',
-    },
-    buttonTextColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'buttonSettings',
-    },
-    buttonBorderColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'buttonSettings',
-    },
-    buttonPadding: {
-      type: 'string',
-      defaultValue: '8px 28px',
-      propGroup: 'buttonSettings',
-    },
+
+    buttonBgColor: { type: 'color', propGroup: 'button' },
+    buttonTextColor: { type: 'color', propGroup: 'button' },
+    buttonTextSize: { type: 'number', propGroup: 'button' },
+    buttonBorderSize: { type: 'number', propGroup: 'button' },
+    buttonBorderColor: { type: 'color', propGroup: 'button' },
+    buttonRadius: { type: 'number', propGroup: 'button' },
+    buttonPadding: { type: 'string', propGroup: 'button' },
     buttonAlign: {
       type: 'choice',
       options: ['left', 'center', 'right'],
-      defaultValue: 'center',
-      propGroup: 'buttonSettings',
+      propGroup: 'button',
     },
-    buttonCursor: {
-      type: 'string',
-      defaultValue: 'pointer',
-      propGroup: 'buttonSettings',
-    },
+    buttonHoverBg: { type: 'color', propGroup: 'button' },
+    buttonHoverText: { type: 'color', propGroup: 'button' },
 
-    buttonHoverEnabled: {
-      type: 'boolean',
-      defaultValue: true,
-      propGroup: 'buttonSettings',
-    },
+    errorMessage: { type: 'string', propGroup: 'error' },
+    errorFontFamily: { type: 'string', propGroup: 'error' },
+    errorFontSize: { type: 'number', propGroup: 'error' },
+    errorFontWeight: { type: 'number', propGroup: 'error' },
+    errorTextColor: { type: 'color', propGroup: 'error' },
+    errorPadding: { type: 'string', propGroup: 'error' },
+    errorMargin: { type: 'string', propGroup: 'error' },
 
-    buttonBgColor: {
-      type: 'color',
-      defaultValue: 'transparent',
-      propGroup: 'buttonSettings',
-    },
-
-    buttonHoverBg: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'buttonSettings',
-    },
-
-    buttonHoverText: {
-      type: 'color',
-      defaultValue: '#000000',
-      propGroup: 'buttonSettings',
-    },
-
-    buttonHoverBorderColor: {
-      type: 'color',
-      defaultValue: '',
-      propGroup: 'buttonSettings',
-    },
+    successMessage: { type: 'string', propGroup: 'success' },
+    successFontFamily: { type: 'string', propGroup: 'success' },
+    successFontSize: { type: 'number', propGroup: 'success' },
+    successFontWeight: { type: 'number', propGroup: 'success' },
+    successTextColor: { type: 'color', propGroup: 'success' },
+    successPadding: { type: 'string', propGroup: 'success' },
+    successMargin: { type: 'string', propGroup: 'success' },
   },
 });
-
 
 export default LeadGenerationForm;
