@@ -87,6 +87,16 @@ function LeadGenerationForm({
   successTextColor = '#aaffaa',
   successPadding = '0',
   successMargin = '16px 0 0',
+
+  /* ---------- CHECKBOX STYLE ---------- */
+  checkboxSize = 18,
+  checkboxRadius = 4,
+  checkboxBg = '#ffffff',
+  checkboxBorderColor = '#cccccc',
+  checkboxBorderWidth = 1,
+  checkboxCheckedBg = '#000000',
+  checkboxCheckedBorderColor = '#000000',
+  checkboxCheckColor = '#ffffff',
 }) {
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState(null);
@@ -271,13 +281,50 @@ function LeadGenerationForm({
                   <label
                     style={{
                       display: 'flex',
-                      alignItems: checkboxAlign,
+                      alignItems: 'flex-start',
                       gap: 10,
-                      fontFamily: labelFontFamily,
+                      cursor: 'pointer',
                       fontSize: labelFontSize,
                       color: labelColor,
                     }}
                   >
+                    {/* CUSTOM CHECKBOX */}
+                    <span
+                      style={{
+                        width: checkboxSize,
+                        height: checkboxSize,
+                        borderRadius: checkboxRadius,
+                        background: values[field.handle]
+                          ? checkboxCheckedBg
+                          : checkboxBg,
+                        border: `${checkboxBorderWidth}px solid ${
+                          values[field.handle]
+                            ? checkboxCheckedBorderColor
+                            : checkboxBorderColor
+                        }`,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 2,
+                        transition: 'all 0.2s ease',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {values[field.handle] === 1 && (
+                        <svg
+                          width={checkboxSize - 6}
+                          height={checkboxSize - 6}
+                          viewBox='0 0 24 24'
+                          fill='none'
+                          stroke={checkboxCheckColor}
+                          strokeWidth='3'
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                        >
+                          <polyline points='20 6 9 17 4 12' />
+                        </svg>
+                      )}
+                    </span>
                     <input
                       type='checkbox'
                       checked={values[field.handle] === 1}
@@ -287,6 +334,11 @@ function LeadGenerationForm({
                           [field.handle]: e.target.checked ? 1 : 0,
                         })
                       }
+                      style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        pointerEvents: 'none',
+                      }}
                     />
                     <span>{field.instructions || field.display}</span>
                   </label>
@@ -400,7 +452,7 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     success: { name: 'Success Message' },
   },
   props: {
-    /* 🔒 EXACT MATCH WITH COMPONENT PROPS */
+    /* EXACT MATCH WITH COMPONENT PROPS */
     formHandle: { type: 'string', propGroup: 'form' },
     submitText: { type: 'string', propGroup: 'form' },
     padding: { type: 'string', propGroup: 'form' },
@@ -428,7 +480,42 @@ PLASMIC.registerComponent(LeadGenerationForm, {
 
     checkboxAlign: {
       type: 'choice',
-      options: ['flex-start', 'center'],
+      options: ['flex-start', 'center', 'stretch', 'baseline'],
+      propGroup: 'checkbox',
+    },
+    checkboxSize: {
+      type: 'number',
+      defaultValue: 18,
+      propGroup: 'checkbox',
+    },
+    checkboxRadius: {
+      type: 'number',
+      defaultValue: 4,
+      propGroup: 'checkbox',
+    },
+    checkboxBg: {
+      type: 'color',
+      propGroup: 'checkbox',
+    },
+    checkboxBorderColor: {
+      type: 'color',
+      propGroup: 'checkbox',
+    },
+    checkboxBorderWidth: {
+      type: 'number',
+      defaultValue: 1,
+      propGroup: 'checkbox',
+    },
+    checkboxCheckedBg: {
+      type: 'color',
+      propGroup: 'checkbox',
+    },
+    checkboxCheckedBorderColor: {
+      type: 'color',
+      propGroup: 'checkbox',
+    },
+    checkboxCheckColor: {
+      type: 'color',
       propGroup: 'checkbox',
     },
 
