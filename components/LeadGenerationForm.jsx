@@ -363,6 +363,7 @@ function LeadGenerationForm({
 /* ---------- PLASMIC REGISTER (ALL PROPS) ---------- */
 PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
+
   propGroups: {
     form: { name: 'Form' },
     label: { name: 'Label' },
@@ -372,69 +373,260 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     error: { name: 'Error Message' },
     success: { name: 'Success Message' },
   },
+
   props: {
-    formHandle: { type: 'string', propGroup: 'form' },
-    submitText: { type: 'string', propGroup: 'form' },
-    padding: { type: 'string', propGroup: 'form' },
-    fieldGap: { type: 'number', propGroup: 'form' },
-    redirectUrl: { type: 'string', propGroup: 'form' },
+    /* ---------- FORM ---------- */
+    formHandle: {
+      type: 'string',
+      defaultValue: 'demo_lead_form', // 🔑 REQUIRED FOR VISIBILITY
+      propGroup: 'form',
+    },
+    submitText: {
+      type: 'string',
+      defaultValue: 'Submit',
+      propGroup: 'form',
+    },
+    padding: {
+      type: 'string',
+      defaultValue: '40px',
+      propGroup: 'form',
+    },
+    fieldGap: {
+      type: 'number',
+      defaultValue: 16,
+      propGroup: 'form',
+    },
+    redirectUrl: {
+      type: 'string',
+      defaultValue: '',
+      propGroup: 'form',
+    },
 
-    labelFontFamily: { type: 'string', propGroup: 'label' },
-    labelFontSize: { type: 'number', propGroup: 'label' },
-    labelFontWeight: { type: 'number', propGroup: 'label' },
-    labelColor: { type: 'color', propGroup: 'label' },
-    labelPadding: { type: 'string', propGroup: 'label' },
-    labelMargin: { type: 'string', propGroup: 'label' },
+    /* ---------- LABEL ---------- */
+    labelFontFamily: {
+      type: 'string',
+      defaultValue: 'inherit',
+      propGroup: 'label',
+    },
+    labelFontSize: {
+      type: 'number',
+      defaultValue: 14,
+      propGroup: 'label',
+    },
+    labelFontWeight: {
+      type: 'number',
+      defaultValue: 400,
+      propGroup: 'label',
+    },
+    labelColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      propGroup: 'label',
+    },
+    labelPadding: {
+      type: 'string',
+      defaultValue: '0',
+      propGroup: 'label',
+    },
+    labelMargin: {
+      type: 'string',
+      defaultValue: '0 0 6px 0',
+      propGroup: 'label',
+    },
 
-    inputFontFamily: { type: 'string', propGroup: 'input' },
-    inputFontSize: { type: 'number', propGroup: 'input' },
-    inputFontWeight: { type: 'number', propGroup: 'input' },
-    inputTextColor: { type: 'color', propGroup: 'input' },
-    inputBgColor: { type: 'color', propGroup: 'input' },
-    inputPadding: { type: 'string', propGroup: 'input' },
-    inputMargin: { type: 'string', propGroup: 'input' },
-    inputHeight: { type: 'number', propGroup: 'input' },
-    inputRadius: { type: 'number', propGroup: 'input' },
-    inputBorderSize: { type: 'number', propGroup: 'input' },
-    inputBorderColor: { type: 'color', propGroup: 'input' },
+    /* ---------- INPUT ---------- */
+    inputFontFamily: {
+      type: 'string',
+      defaultValue: 'inherit',
+      propGroup: 'input',
+    },
+    inputFontSize: {
+      type: 'number',
+      defaultValue: 14,
+      propGroup: 'input',
+    },
+    inputFontWeight: {
+      type: 'number',
+      defaultValue: 400,
+      propGroup: 'input',
+    },
+    inputTextColor: {
+      type: 'color',
+      defaultValue: '#000000',
+      propGroup: 'input',
+    },
+    inputBgColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      propGroup: 'input',
+    },
+    inputPadding: {
+      type: 'string',
+      defaultValue: '6px 10px',
+      propGroup: 'input',
+    },
+    inputMargin: {
+      type: 'string',
+      defaultValue: '0',
+      propGroup: 'input',
+    },
+    inputHeight: {
+      type: 'number',
+      defaultValue: 38,
+      propGroup: 'input',
+    },
+    inputRadius: {
+      type: 'number',
+      defaultValue: 2,
+      propGroup: 'input',
+    },
+    inputBorderSize: {
+      type: 'number',
+      defaultValue: 1,
+      propGroup: 'input',
+    },
+    inputBorderColor: {
+      type: 'color',
+      defaultValue: '#cccccc',
+      propGroup: 'input',
+    },
 
+    /* ---------- CHECKBOX ---------- */
     checkboxAlign: {
       type: 'choice',
       options: ['flex-start', 'center'],
+      defaultValue: 'flex-start',
       propGroup: 'checkbox',
     },
 
-    buttonBgColor: { type: 'color', propGroup: 'button' },
-    buttonTextColor: { type: 'color', propGroup: 'button' },
-    buttonTextSize: { type: 'number', propGroup: 'button' },
-    buttonBorderSize: { type: 'number', propGroup: 'button' },
-    buttonBorderColor: { type: 'color', propGroup: 'button' },
-    buttonRadius: { type: 'number', propGroup: 'button' },
-    buttonPadding: { type: 'string', propGroup: 'button' },
+    /* ---------- BUTTON ---------- */
+    buttonBgColor: {
+      type: 'color',
+      defaultValue: 'transparent',
+      propGroup: 'button',
+    },
+    buttonTextColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      propGroup: 'button',
+    },
+    buttonTextSize: {
+      type: 'number',
+      defaultValue: 14,
+      propGroup: 'button',
+    },
+    buttonBorderSize: {
+      type: 'number',
+      defaultValue: 1,
+      propGroup: 'button',
+    },
+    buttonBorderColor: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      propGroup: 'button',
+    },
+    buttonRadius: {
+      type: 'number',
+      defaultValue: 2,
+      propGroup: 'button',
+    },
+    buttonPadding: {
+      type: 'string',
+      defaultValue: '8px 28px',
+      propGroup: 'button',
+    },
     buttonAlign: {
       type: 'choice',
       options: ['left', 'center', 'right'],
+      defaultValue: 'center',
       propGroup: 'button',
     },
-    buttonHoverBg: { type: 'color', propGroup: 'button' },
-    buttonHoverText: { type: 'color', propGroup: 'button' },
+    buttonHoverBg: {
+      type: 'color',
+      defaultValue: '#ffffff',
+      propGroup: 'button',
+    },
+    buttonHoverText: {
+      type: 'color',
+      defaultValue: '#000000',
+      propGroup: 'button',
+    },
 
-    errorMessage: { type: 'string', propGroup: 'error' },
-    errorFontFamily: { type: 'string', propGroup: 'error' },
-    errorFontSize: { type: 'number', propGroup: 'error' },
-    errorFontWeight: { type: 'number', propGroup: 'error' },
-    errorTextColor: { type: 'color', propGroup: 'error' },
-    errorPadding: { type: 'string', propGroup: 'error' },
-    errorMargin: { type: 'string', propGroup: 'error' },
+    /* ---------- ERROR ---------- */
+    errorMessage: {
+      type: 'string',
+      defaultValue: 'Something wrong with form data!',
+      propGroup: 'error',
+    },
+    errorFontFamily: {
+      type: 'string',
+      defaultValue: 'inherit',
+      propGroup: 'error',
+    },
+    errorFontSize: {
+      type: 'number',
+      defaultValue: 16,
+      propGroup: 'error',
+    },
+    errorFontWeight: {
+      type: 'number',
+      defaultValue: 400,
+      propGroup: 'error',
+    },
+    errorTextColor: {
+      type: 'color',
+      defaultValue: '#ffdddd',
+      propGroup: 'error',
+    },
+    errorPadding: {
+      type: 'string',
+      defaultValue: '0',
+      propGroup: 'error',
+    },
+    errorMargin: {
+      type: 'string',
+      defaultValue: '12px 0 0',
+      propGroup: 'error',
+    },
 
-    successMessage: { type: 'string', propGroup: 'success' },
-    successFontFamily: { type: 'string', propGroup: 'success' },
-    successFontSize: { type: 'number', propGroup: 'success' },
-    successFontWeight: { type: 'number', propGroup: 'success' },
-    successTextColor: { type: 'color', propGroup: 'success' },
-    successPadding: { type: 'string', propGroup: 'success' },
-    successMargin: { type: 'string', propGroup: 'success' },
+    /* ---------- SUCCESS ---------- */
+    successMessage: {
+      type: 'string',
+      defaultValue: 'Form submitted successfully!',
+      propGroup: 'success',
+    },
+    successFontFamily: {
+      type: 'string',
+      defaultValue: 'inherit',
+      propGroup: 'success',
+    },
+    successFontSize: {
+      type: 'number',
+      defaultValue: 16,
+      propGroup: 'success',
+    },
+    successFontWeight: {
+      type: 'number',
+      defaultValue: 400,
+      propGroup: 'success',
+    },
+    successTextColor: {
+      type: 'color',
+      defaultValue: '#aaffaa',
+      propGroup: 'success',
+    },
+    successPadding: {
+      type: 'string',
+      defaultValue: '0',
+      propGroup: 'success',
+    },
+    successMargin: {
+      type: 'string',
+      defaultValue: '16px 0 0',
+      propGroup: 'success',
+    },
   },
 });
+
 
 export default LeadGenerationForm;
