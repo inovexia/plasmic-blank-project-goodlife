@@ -167,47 +167,94 @@ function LeadGenerationForm({
   }
 
   /* ---------- SUBMIT ---------- */
-  async function onSubmit(e) {
-    e.preventDefault();
-    setSuccess('');
-    setFormError('');
+ async function onSubmit(e) {
+   e.preventDefault();
+   setSuccess('');
+   setFormError('');
 
-    if (!validate()) return;
-    setLoading(true);
+   if (!validate()) return;
+   setLoading(true);
 
-    try {
-      const formPayload = new FormData();
-      Object.entries(values).forEach(([key, value]) =>
-        formPayload.append(key, value)
-      );
+   try {
+     const formPayload = new FormData();
+     Object.entries(values).forEach(([key, value]) =>
+       formPayload.append(key, value)
+     );
 
-      const res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
-        method: 'POST',
-        body: formPayload,
-        mode: 'cors',
-      });
+     const res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
+       method: 'POST',
+       body: formPayload,
+       mode: 'cors',
+     });
 
-      const raw = await res.text();
-      const data = raw ? JSON.parse(raw) : null;
+     const raw = await res.text();
+     const data = raw ? JSON.parse(raw) : null;
 
-      if (!res.ok || data?.success === false) {
-        setFormError(errorMessage);
-        return;
-      }
+     /* ---------- HANDLE API ERRORS ---------- */
+     if (!res.ok || data?.success === false) {
+       if (data?.errors && typeof data.errors === 'object') {
+         const apiErrors = {};
+         Object.entries(data.errors).forEach(([key, msgs]) => {
+           apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
+         });
+         setErrors(apiErrors);
+         setFormError('');
+         return;
+       }
 
-      setSuccess(successMessage);
-      setValues({});
-      setErrors({});
+       if (data?.message) {
+         setFormError(data.message);
+         return;
+       }
 
-      if (redirectUrl) {
-        setTimeout(() => (window.location.href = redirectUrl), 500);
-      }
-    } catch {
-      setFormError('Form submission failed');
-    } finally {
-      setLoading(false);
-    }
-  }
+       if (data?.error) {
+         setFormError(data.error);
+         return;
+       }
+
+       setFormError(errorMessage);
+       return;
+     }
+
+     /* ---------- SUCCESS ---------- */
+     try {
+       if (typeof window !== 'undefined') {
+         // Save email
+         const emailField = Object.values(form.fields || {}).find((field) =>
+           field.validate?.includes('email')
+         );
+
+         if (emailField) {
+           const emailValue = values[emailField.handle];
+           if (emailValue) {
+             localStorage.setItem('lead_email', emailValue);
+           }
+         }
+
+         // Save form handle
+         if (formHandle) {
+           localStorage.setItem('form_handle', formHandle);
+         }
+       }
+     } catch {
+       // Silent fail – never block success
+     }
+
+     setSuccess(successMessage);
+     setValues({});
+     setErrors({});
+
+     if (redirectUrl) {
+       setTimeout(() => (window.location.href = redirectUrl), 500);
+     }
+   } catch (err) {
+     setFormError(err?.message || 'Form submission failed');
+   } finally {
+     setLoading(false);
+   }
+ }
+
+
 
   const alignMap = {
     left: 'flex-start',
