@@ -265,7 +265,7 @@ export default function PrizeScratchCard(props) {
 
             <h2>{popupTitle}</h2>
 
-            <p>
+            <p style={{padding:"15px 0px"}}>
               {isPrizeAvailable
                 ? popupMessage
                 : 'Thank you for participating! Better luck next time 🎉'}
