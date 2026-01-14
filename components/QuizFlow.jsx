@@ -9,10 +9,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 /* ---------------- NORMALIZE QUESTIONS ---------------- */
 function normalizeQuestions(questions = []) {
   return questions.map((q, qIndex) => ({
-    id: q.id ?? qIndex + 1, // real question id if exists
+    id: q.id ?? qIndex + 1,
     question: q.question,
     options: q.answers.map((a, i) => ({
-      id: a.id ?? i, // option id (important)
+      id: a.id ?? i,
       label: a.choice,
       isCorrect: a.is_correct,
       feedback: a.feedback,
@@ -24,18 +24,26 @@ function QuizFlow({
   quizId,
   redirectUrl = '/quiz-result',
 
+  /* ---------- QUESTION ---------- */
   questionFontSize = 48,
+  questionFontSizeMobile = 28,
   questionColor = '#ffffff',
+  questionAlign = 'center',
 
+  /* ---------- OPTIONS ---------- */
   optionFontSize = 18,
+  optionFontSizeMobile = 16,
   optionColor = '#ffffff',
   radioSize = 18,
 
+  /* ---------- FEEDBACK ---------- */
   feedbackFontSize = 16,
+  feedbackFontSizeMobile = 14,
   feedbackColor = '#000000',
   correctColor = '#1fbf75',
   incorrectColor = '#ff4d4f',
 
+  /* ---------- BUTTON ---------- */
   buttonText = 'Next',
   buttonBg = '#0b4a8b',
   buttonColor = '#ffffff',
@@ -46,10 +54,7 @@ function QuizFlow({
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [locked, setLocked] = useState(false);
-
-  // answers[questionId] = optionId
   const [answers, setAnswers] = useState({});
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -84,21 +89,17 @@ function QuizFlow({
   const isLast = current === questions.length - 1;
   const selectedOption = selected !== null ? q.options[selected] : null;
 
-  /* ---------------- SELECT ANSWER ---------------- */
   function handleSelect(index) {
     if (locked) return;
-
     setSelected(index);
     setLocked(true);
 
-    // STORE AS answers[question_id] = option_id
     setAnswers((prev) => ({
       ...prev,
       [q.id]: q.options[index].id,
     }));
   }
 
-  /* ---------------- NEXT / SUBMIT ---------------- */
   async function handleNext() {
     if (!isLast) {
       setSelected(null);
@@ -110,7 +111,6 @@ function QuizFlow({
     try {
       const formData = new FormData();
 
-      // EMAIL & FORM HANDLE FROM localStorage
       const storedEmail =
         typeof window !== 'undefined' ? localStorage.getItem('lead_email') : '';
 
@@ -119,23 +119,18 @@ function QuizFlow({
           ? localStorage.getItem('form_handle')
           : '';
 
-      if (storedEmail) {
-        formData.append('email', storedEmail);
-      }
+      if (storedEmail) formData.append('email', storedEmail);
+      if (storedFormHandle) formData.append('form_handle', storedFormHandle);
 
-      if (storedFormHandle) {
-        formData.append('form_handle', storedFormHandle);
-      }
-
-      // answers[question_id] = option_id
-      Object.entries(answers).forEach(([questionId, optionId]) => {
-        formData.append(`answers[${questionId}]`, optionId);
+      Object.entries(answers).forEach(([qid, oid]) => {
+        formData.append(`answers[${qid}]`, oid);
       });
 
       await fetch(`${API_BASE_URL}/quiz/${quizId}/submit`, {
         method: 'POST',
         body: formData,
       });
+
       router.push(redirectUrl);
     } catch {
       alert('Quiz submission failed');
@@ -144,7 +139,19 @@ function QuizFlow({
 
   /* ---------------- UI ---------------- */
   return (
-    <div style={{ padding: 40, textAlign: 'center' }}>
+    <div
+      style={{
+        padding: 40,
+        textAlign: questionAlign,
+        /* CSS VARIABLES */
+        '--q-font': `${questionFontSize}px`,
+        '--q-font-m': `${questionFontSizeMobile}px`,
+        '--opt-font': `${optionFontSize}px`,
+        '--opt-font-m': `${optionFontSizeMobile}px`,
+        '--fb-font': `${feedbackFontSize}px`,
+        '--fb-font-m': `${feedbackFontSizeMobile}px`,
+      }}
+    >
       <style>{`
         .quiz-grid {
           display: grid;
@@ -155,18 +162,40 @@ function QuizFlow({
           align-items: start;
         }
 
+        .quiz-question {
+          font-size: var(--q-font);
+        }
+
+        .quiz-option {
+          font-size: var(--opt-font);
+        }
+
+        .quiz-feedback {
+          font-size: var(--fb-font);
+        }
+
         @media (max-width: 768px) {
           .quiz-grid {
             grid-template-columns: 1fr;
+          }
+          .quiz-question {
+            font-size: var(--q-font-m);
+          }
+          .quiz-option {
+            font-size: var(--opt-font-m);
+          }
+          .quiz-feedback {
+            font-size: var(--fb-font-m);
           }
         }
       `}</style>
 
       <h2
+        className='quiz-question'
         style={{
-          fontSize: questionFontSize,
           color: questionColor,
           marginBottom: 40,
+          textAlign: questionAlign,
         }}
       >
         {q.question}
@@ -178,11 +207,11 @@ function QuizFlow({
           {q.options.map((opt, i) => (
             <label
               key={opt.id}
+              className='quiz-option'
               style={{
                 display: 'flex',
                 gap: 10,
                 marginBottom: 16,
-                fontSize: optionFontSize,
                 color: optionColor,
                 cursor: locked ? 'default' : 'pointer',
               }}
@@ -204,9 +233,9 @@ function QuizFlow({
           {selectedOption && (
             <>
               <div
+                className='quiz-feedback'
                 style={{
                   fontWeight: 600,
-                  fontSize: feedbackFontSize,
                   color: selectedOption.isCorrect
                     ? correctColor
                     : incorrectColor,
@@ -217,12 +246,7 @@ function QuizFlow({
               </div>
 
               {selectedOption.feedback && (
-                <div
-                  style={{
-                    fontSize: feedbackFontSize,
-                    color: feedbackColor,
-                  }}
-                >
+                <div className='quiz-feedback' style={{ color: feedbackColor }}>
                   {selectedOption.feedback}
                 </div>
               )}
@@ -258,13 +282,21 @@ PLASMIC.registerComponent(QuizFlow, {
     redirectUrl: { type: 'string', defaultValue: '/quiz-result' },
 
     questionFontSize: { type: 'number' },
+    questionFontSizeMobile: { type: 'number', defaultValue: 28 },
     questionColor: { type: 'color' },
+    questionAlign: {
+      type: 'choice',
+      options: ['left', 'center', 'right'],
+      defaultValue: 'center',
+    },
 
     optionFontSize: { type: 'number' },
+    optionFontSizeMobile: { type: 'number', defaultValue: 16 },
     optionColor: { type: 'color' },
     radioSize: { type: 'number' },
 
     feedbackFontSize: { type: 'number' },
+    feedbackFontSizeMobile: { type: 'number', defaultValue: 14 },
     feedbackColor: { type: 'color' },
     correctColor: { type: 'color' },
     incorrectColor: { type: 'color' },
