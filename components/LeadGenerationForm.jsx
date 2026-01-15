@@ -143,28 +143,64 @@ function LeadGenerationForm({
       .catch(() => setFormError(errorMessage));
   }, [mounted, formHandle, errorMessage]);
 
-
   /* ---------- VALIDATION ---------- */
   function validate() {
     const errs = {};
+
     Object.values(form.fields || {}).forEach((field) => {
       const value = values[field.handle];
       const rules = field.validate || [];
+      const fieldValue = value?.toString().trim() || '';
+      const handle = field.handle.toLowerCase();
 
+      /* ---------- REQUIRED ---------- */
       if (rules.includes('required')) {
         if (field.type === 'checkboxes') {
-          if (value !== 1) errs[field.handle] = 'Required';
-        } else if (!value?.trim()) {
+          if (value !== 1) {
+            errs[field.handle] = 'Required';
+            return;
+          }
+        } else if (!fieldValue) {
           errs[field.handle] = 'Required';
+          return;
         }
       }
 
+      /* ---------- EMAIL ---------- */
       if (
         rules.includes('email') &&
-        value &&
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+        fieldValue &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fieldValue)
       ) {
-        errs[field.handle] = 'Invalid email';
+        errs[field.handle] = 'Invalid email address';
+        return;
+      }
+
+      /* ---------- PHONE / MOBILE ---------- */
+      if (handle.includes('phone') || handle.includes('mobile')) {
+        if (!/^\d+$/.test(fieldValue)) {
+          errs[field.handle] = 'Phone number must contain only digits';
+          return;
+        }
+
+        if (fieldValue.length < 10 || fieldValue.length > 12) {
+          errs[field.handle] = 'Phone number must be between 10 and 12 digits';
+          return;
+        }
+      }
+
+      /* ---------- POSTAL / ZIP (ALPHANUMERIC, EXACT 6) ---------- */
+      if (handle.includes('postal') || handle.includes('zip')) {
+        if (!/^[a-zA-Z0-9]+$/.test(fieldValue)) {
+          errs[field.handle] =
+            'Postal code must contain only letters and numbers';
+          return;
+        }
+
+        if (fieldValue.length !== 6) {
+          errs[field.handle] = 'Postal code must be exactly 6 characters';
+          return;
+        }
       }
     });
 
@@ -173,123 +209,128 @@ function LeadGenerationForm({
   }
 
   /* ---------- SUBMIT ---------- */
- async function onSubmit(e) {
-   e.preventDefault();
-   setSuccess('');
-   setFormError('');
+  async function onSubmit(e) {
+    e.preventDefault();
+    setSuccess('');
+    setFormError('');
 
-   if (!validate()) return;
-   setLoading(true);
+    if (!validate()) return;
+    setLoading(true);
 
-   try {
-     const formPayload = new FormData();
-     Object.entries(values).forEach(([key, value]) =>
-       formPayload.append(key, value)
-     );
+    try {
+      const formPayload = new FormData();
+      Object.entries(values).forEach(([key, value]) =>
+        formPayload.append(key, value)
+      );
 
-     const controller = new AbortController();
-const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s max
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s max
 
-let res;
+      let res;
 
-try {
-  res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
-    method: 'POST',
-    body: formPayload,
-    mode: 'cors',
-    signal: controller.signal,
-  });
-} catch (err) {
-  // ⬇️ THIS IS THE KEY FIX
-  if (err.name === 'AbortError') {
-    // Backend likely saved data but never responded
-    res = { ok: true };
-  } else {
-    throw err;
+      try {
+        res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
+          method: 'POST',
+          body: formPayload,
+          mode: 'cors',
+          signal: controller.signal,
+        });
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          res = { ok: true };
+        } else {
+          throw err;
+        }
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      /* ---------- SAFE RESPONSE PARSING ---------- */
+      let data = null;
+
+      try {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          data = await res.json();
+        }
+      } catch {
+        data = null;
+      }
+
+      /* ---------- HANDLE API ERRORS ---------- */
+
+      if (!res.ok || data?.success === false) {
+        const apiErrors = {};
+
+        // Case 1: message is an object (FIELD VALIDATION)
+        if (data?.message && typeof data.message === 'object') {
+          Object.entries(data.message).forEach(([key, msgs]) => {
+            apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
+          });
+        }
+
+        // Case 2: errors is an object (FIELD VALIDATION)
+        if (data?.errors && typeof data.errors === 'object') {
+          Object.entries(data.errors).forEach(([key, msgs]) => {
+            apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
+          });
+        }
+
+        // If field-level errors exist → show under fields
+        if (Object.keys(apiErrors).length > 0) {
+          setErrors(apiErrors);
+          setFormError('');
+          return;
+        }
+
+        // Case 3: message is string (GENERAL ERROR)
+        if (typeof data?.message === 'string') {
+          setFormError(data.message);
+          return;
+        }
+
+        // Case 4: fallback
+        setFormError(errorMessage);
+        return;
+      }
+
+      /* ---------- SUCCESS ---------- */
+      try {
+        if (typeof window !== 'undefined') {
+          // Save email
+          const emailField = Object.values(form.fields || {}).find((field) =>
+            field.validate?.includes('email')
+          );
+
+          if (emailField) {
+            const emailValue = values[emailField.handle];
+            if (emailValue) {
+              localStorage.setItem('lead_email', emailValue);
+            }
+          }
+
+          // Save form handle
+          if (formHandle) {
+            localStorage.setItem('form_handle', formHandle);
+          }
+        }
+      } catch {
+        // Silent fail – never block success
+      }
+
+      setSuccess(successMessage);
+      setValues({});
+      setErrors({});
+
+      if (redirectUrl) {
+        setTimeout(() => (window.location.href = redirectUrl), 500);
+      }
+    } catch (err) {
+      setFormError(err?.message || 'Form submission failed');
+    } finally {
+      setLoading(false);
+    }
   }
-} finally {
-  clearTimeout(timeoutId);
-}
-
-
-     /* ---------- SAFE RESPONSE PARSING ---------- */
-     let data = null;
-
-     try {
-       const contentType = res.headers.get('content-type') || '';
-       if (contentType.includes('application/json')) {
-         data = await res.json();
-       }
-     } catch {
-       data = null;
-     }
-
-     /* ---------- HANDLE API ERRORS ---------- */
-     if (!res.ok || data?.success === false) {
-       if (data?.errors && typeof data.errors === 'object') {
-         const apiErrors = {};
-         Object.entries(data.errors).forEach(([key, msgs]) => {
-           apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
-         });
-         setErrors(apiErrors);
-         setFormError('');
-         return;
-       }
-
-       if (data?.message) {
-         setFormError(data.message);
-         return;
-       }
-
-       if (data?.error) {
-         setFormError(data.error);
-         return;
-       }
-
-       setFormError(errorMessage);
-       return;
-     }
-
-
-     /* ---------- SUCCESS ---------- */
-     try {
-       if (typeof window !== 'undefined') {
-         // Save email
-         const emailField = Object.values(form.fields || {}).find((field) =>
-           field.validate?.includes('email')
-         );
-
-         if (emailField) {
-           const emailValue = values[emailField.handle];
-           if (emailValue) {
-             localStorage.setItem('lead_email', emailValue);
-           }
-         }
-
-         // Save form handle
-         if (formHandle) {
-           localStorage.setItem('form_handle', formHandle);
-         }
-       }
-     } catch {
-       // Silent fail – never block success
-     }
-
-     setSuccess(successMessage);
-     setValues({});
-     setErrors({});
-
-     if (redirectUrl) {
-       setTimeout(() => (window.location.href = redirectUrl), 500);
-     }
-   } catch (err) {
-     setFormError(err?.message || 'Form submission failed');
-   } finally {
-     setLoading(false);
-   }
- }
-
-
 
   const alignMap = {
     left: 'flex-start',
