@@ -16,6 +16,12 @@ const PREVIEW_PRIZE = {
 const isValidUUID = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
+
+const isMobile =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(max-width: 768px)').matches;
+
+
 /* ---------- PLASMIC FLAG ---------- */
 const isPlasmicPreview =
   typeof window !== 'undefined' && !!window.__PLASMIC_PREVIEW__;
@@ -126,6 +132,14 @@ export default function PrizeScratchCard(props) {
 
     let drawing = false;
 
+    const lockScroll = () => {
+      document.body.style.overflow = 'hidden';
+    };
+
+    const unlockScroll = () => {
+      document.body.style.overflow = '';
+    };
+
     const scratch = (x, y) => {
       ctx.beginPath();
       ctx.arc(x, y, scratchBrushSize, 0, Math.PI * 2);
@@ -141,10 +155,15 @@ export default function PrizeScratchCard(props) {
       };
     };
 
-    const down = () => (drawing = true);
+    const down = (e) => {
+      drawing = true;
+      if (isMobile) lockScroll();
+    };
 
     const up = () => {
       drawing = false;
+      unlockScroll();
+
       const pixels = ctx.getImageData(0, 0, width, height).data;
       let cleared = 0;
       for (let i = 3; i < pixels.length; i += 4) {
@@ -159,6 +178,7 @@ export default function PrizeScratchCard(props) {
 
     const move = (e) => {
       if (!drawing) return;
+      e.preventDefault(); // 🔑 THIS FIXES MOBILE SCROLL
       const { x, y } = getPos(e);
       scratch(x, y);
     };
@@ -166,11 +186,13 @@ export default function PrizeScratchCard(props) {
     canvas.addEventListener('mousedown', down);
     canvas.addEventListener('mouseup', up);
     canvas.addEventListener('mousemove', move);
-    canvas.addEventListener('touchstart', down);
+
+    canvas.addEventListener('touchstart', down, { passive: false });
     canvas.addEventListener('touchend', up);
-    canvas.addEventListener('touchmove', move);
+    canvas.addEventListener('touchmove', move, { passive: false });
 
     return () => {
+      unlockScroll();
       canvas.removeEventListener('mousedown', down);
       canvas.removeEventListener('mouseup', up);
       canvas.removeEventListener('mousemove', move);
@@ -180,10 +202,18 @@ export default function PrizeScratchCard(props) {
     };
   }, [width, height, scratchBrushSize, scratchThreshold, revealed]);
 
+
   /* ================= UI ================= */
   return (
     <>
-      <div style={{ position: 'relative', width, height }}>
+      <div
+        style={{
+          position: 'relative',
+          width: isMobile ? '90vw' : width,
+          height,
+          margin: isMobile ? '0 auto' : undefined,
+        }}
+      >
         <div
           style={{
             width,
@@ -223,69 +253,38 @@ export default function PrizeScratchCard(props) {
         )}
       </div>
 
-      {/* POPUP */}
+      {/* RESULT CONTENT BELOW SCRATCH CARD */}
       {showPopup && (
         <div
           style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
+            marginTop: 24,
+            textAlign: 'center',
+            maxWidth: width,
           }}
         >
-          <div
-            style={{
-              background: popupBgColor,
-              padding: 24,
-              borderRadius: 12,
-              width: 320,
-              textAlign: 'center',
-              position: 'relative',
-            }}
-          >
-            {showClose && (
-              <button
-                onClick={() => setShowPopup(false)}
-                style={{
-                  position: 'absolute',
-                  top: 10,
-                  right: 10,
-                  border: 'none',
-                  background: 'transparent',
-                  fontSize: 20,
-                  cursor: 'pointer',
-                }}
-              >
-                ✕
-              </button>
-            )}
+          <h2 style={{ marginBottom: 8 }}>{popupTitle}</h2>
 
-            <h2>{popupTitle}</h2>
+          <p style={{ marginBottom: 16 }}>
+            {isPrizeAvailable
+              ? popupMessage
+              : 'Thank you for participating! Better luck next time 🎉'}
+          </p>
 
-            <p style={{padding:"15px 0px"}}>
-              {isPrizeAvailable
-                ? popupMessage
-                : 'Thank you for participating! Better luck next time 🎉'}
-            </p>
-
-            <a href={buttonLink} target='_blank' rel='noopener noreferrer'>
-              <button
-                style={{
-                  background: buttonBgColor,
-                  color: buttonTextColor,
-                  padding: '10px 20px',
-                  borderRadius: 6,
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                {buttonText}
-              </button>
-            </a>
-          </div>
+          <a href={buttonLink} target='_blank' rel='noopener noreferrer'>
+            <button
+              style={{
+                background: buttonBgColor,
+                color: buttonTextColor,
+                padding: '10px 22px',
+                borderRadius: 6,
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              {buttonText}
+            </button>
+          </a>
         </div>
       )}
     </>
