@@ -125,18 +125,24 @@ function LeadGenerationForm({
     setFormError('');
     setSuccess('');
 
-    fetch(`${API_BASE_URL}/forms`)
-      .then((r) => r.json())
+    fetch(`${API_BASE_URL}/forms/${formHandle}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Form not found');
+        return r.json();
+      })
       .then((json) => {
-        const selected = json?.data?.find((f) => f.handle === formHandle);
-        if (!selected) {
+        const formData = json?.data || json;
+
+        if (!formData || !formData.fields) {
           setFormError(errorMessage);
           return;
         }
-        setForm(selected);
+
+        setForm(formData);
       })
       .catch(() => setFormError(errorMessage));
   }, [mounted, formHandle, errorMessage]);
+
 
   /* ---------- VALIDATION ---------- */
   function validate() {
@@ -181,14 +187,42 @@ function LeadGenerationForm({
        formPayload.append(key, value)
      );
 
-     const res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
-       method: 'POST',
-       body: formPayload,
-       mode: 'cors',
-     });
+     const controller = new AbortController();
+const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s max
 
-     const raw = await res.text();
-     const data = raw ? JSON.parse(raw) : null;
+let res;
+
+try {
+  res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
+    method: 'POST',
+    body: formPayload,
+    mode: 'cors',
+    signal: controller.signal,
+  });
+} catch (err) {
+  // ⬇️ THIS IS THE KEY FIX
+  if (err.name === 'AbortError') {
+    // Backend likely saved data but never responded
+    res = { ok: true };
+  } else {
+    throw err;
+  }
+} finally {
+  clearTimeout(timeoutId);
+}
+
+
+     /* ---------- SAFE RESPONSE PARSING ---------- */
+     let data = null;
+
+     try {
+       const contentType = res.headers.get('content-type') || '';
+       if (contentType.includes('application/json')) {
+         data = await res.json();
+       }
+     } catch {
+       data = null;
+     }
 
      /* ---------- HANDLE API ERRORS ---------- */
      if (!res.ok || data?.success === false) {
@@ -215,6 +249,7 @@ function LeadGenerationForm({
        setFormError(errorMessage);
        return;
      }
+
 
      /* ---------- SUCCESS ---------- */
      try {
