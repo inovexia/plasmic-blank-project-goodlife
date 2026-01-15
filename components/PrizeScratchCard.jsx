@@ -16,12 +16,6 @@ const PREVIEW_PRIZE = {
 const isValidUUID = (value) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
-
-const isMobile =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(max-width: 768px)').matches;
-
-
 /* ---------- PLASMIC FLAG ---------- */
 const isPlasmicPreview =
   typeof window !== 'undefined' && !!window.__PLASMIC_PREVIEW__;
@@ -42,23 +36,44 @@ export default function PrizeScratchCard(props) {
 
     buttonBgColor = '#28a745',
     buttonTextColor = '#ffffff',
-    popupBgColor = '#ffffff',
-    showClose = true,
   } = props;
 
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
 
   const [prize, setPrize] = useState({ title: '', url: null });
   const [revealed, setRevealed] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isPrizeAvailable, setIsPrizeAvailable] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ w: width, h: height });
+
+  /* ---------- MOBILE DETECT ---------- */
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  /* ---------- RESPONSIVE SIZE ---------- */
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    if (isMobile) {
+      const w = containerRef.current.offsetWidth;
+      const h = (w / width) * height;
+      setCanvasSize({ w, h });
+    } else {
+      setCanvasSize({ w: width, h: height });
+    }
+  }, [isMobile, width, height]);
 
   /* ================= FETCH PRIZE ================= */
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    /* PLASMIC → SAMPLE ONLY */
     if (isPlasmicPreview) {
       setPrize(PREVIEW_PRIZE);
       setIsPrizeAvailable(true);
@@ -76,10 +91,9 @@ export default function PrizeScratchCard(props) {
 
     const fetchPrize = async () => {
       try {
-        const cleanedEventId = (eventId || '').trim();
         const finalEventId =
-          cleanedEventId && isValidUUID(cleanedEventId)
-            ? cleanedEventId
+          eventId && isValidUUID(eventId.trim())
+            ? eventId.trim()
             : DEFAULT_EVENT_ID;
 
         const res = await fetch(`${API_BASE_URL}/event/${finalEventId}/prize`, {
@@ -91,10 +105,7 @@ export default function PrizeScratchCard(props) {
         const data = await res.json();
 
         if (!data?.success) {
-          setPrize({
-            title: data?.message || 'No prizes available',
-            url: null,
-          });
+          setPrize({ title: data?.message || 'No prizes available', url: null });
           setIsPrizeAvailable(false);
           return;
         }
@@ -104,8 +115,7 @@ export default function PrizeScratchCard(props) {
           url: data.payload.url || null,
         });
         setIsPrizeAvailable(true);
-      } catch (err) {
-        console.error('Prize API error:', err);
+      } catch {
         setPrize({ title: 'No prizes available', url: null });
         setIsPrizeAvailable(false);
       }
@@ -122,23 +132,18 @@ export default function PrizeScratchCard(props) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = canvasSize.w;
+    canvas.height = canvasSize.h;
 
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = coverColor;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.globalCompositeOperation = 'destination-out';
 
     let drawing = false;
 
-    const lockScroll = () => {
-      document.body.style.overflow = 'hidden';
-    };
-
-    const unlockScroll = () => {
-      document.body.style.overflow = '';
-    };
+    const lockScroll = () => (document.body.style.overflow = 'hidden');
+    const unlockScroll = () => (document.body.style.overflow = '');
 
     const scratch = (x, y) => {
       ctx.beginPath();
@@ -148,14 +153,14 @@ export default function PrizeScratchCard(props) {
 
     const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
-      const t = e.touches && e.touches[0];
+      const t = e.touches?.[0];
       return {
         x: (t ? t.clientX : e.clientX) - rect.left,
         y: (t ? t.clientY : e.clientY) - rect.top,
       };
     };
 
-    const down = (e) => {
+    const down = () => {
       drawing = true;
       if (isMobile) lockScroll();
     };
@@ -164,13 +169,13 @@ export default function PrizeScratchCard(props) {
       drawing = false;
       unlockScroll();
 
-      const pixels = ctx.getImageData(0, 0, width, height).data;
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
       let cleared = 0;
       for (let i = 3; i < pixels.length; i += 4) {
         if (pixels[i] === 0) cleared++;
       }
 
-      if ((cleared / (width * height)) * 100 >= scratchThreshold) {
+      if ((cleared / (canvas.width * canvas.height)) * 100 >= scratchThreshold) {
         setRevealed(true);
         setShowPopup(true);
       }
@@ -178,7 +183,7 @@ export default function PrizeScratchCard(props) {
 
     const move = (e) => {
       if (!drawing) return;
-      e.preventDefault(); // 🔑 THIS FIXES MOBILE SCROLL
+      e.preventDefault();
       const { x, y } = getPos(e);
       scratch(x, y);
     };
@@ -200,24 +205,24 @@ export default function PrizeScratchCard(props) {
       canvas.removeEventListener('touchend', up);
       canvas.removeEventListener('touchmove', move);
     };
-  }, [width, height, scratchBrushSize, scratchThreshold, revealed]);
-
+  }, [canvasSize, scratchBrushSize, scratchThreshold, revealed, isMobile]);
 
   /* ================= UI ================= */
   return (
     <>
       <div
+        ref={containerRef}
         style={{
           position: 'relative',
-          width: isMobile ? '90vw' : width,
-          height,
-          margin: isMobile ? '0 auto' : undefined,
+          width: isMobile ? '100%' : width,
+          height: canvasSize.h,
+          margin: '0 auto',
         }}
       >
         <div
           style={{
-            width,
-            height,
+            width: '100%',
+            height: '100%',
             borderRadius: 8,
             background: '#fff',
             display: 'flex',
@@ -248,29 +253,29 @@ export default function PrizeScratchCard(props) {
               inset: 0,
               borderRadius: 8,
               cursor: 'pointer',
+              touchAction: 'none',
             }}
           />
         )}
       </div>
 
-      {/* RESULT CONTENT BELOW SCRATCH CARD */}
       {showPopup && (
         <div
           style={{
             marginTop: 24,
             textAlign: 'center',
-            maxWidth: width,
+            maxWidth: isMobile ? '100%' : width,
+            marginInline: 'auto',
           }}
         >
-          <h2 style={{ marginBottom: 8 }}>{popupTitle}</h2>
-
-          <p style={{ marginBottom: 16 }}>
+          <h2>{popupTitle}</h2>
+          <p>
             {isPrizeAvailable
               ? popupMessage
               : 'Thank you for participating! Better luck next time 🎉'}
           </p>
 
-          <a href={buttonLink} target='_blank' rel='noopener noreferrer'>
+          <a href={buttonLink} target="_blank" rel="noopener noreferrer">
             <button
               style={{
                 background: buttonBgColor,
@@ -303,8 +308,6 @@ PLASMIC.registerComponent(PrizeScratchCard, {
     scratchBrushSize: { type: 'number', defaultValue: 30 },
     popupTitle: { type: 'string' },
     popupMessage: { type: 'string' },
-    popupBgColor: { type: 'color' },
-    showClose: { type: 'boolean', defaultValue: true },
     buttonText: { type: 'string' },
     buttonLink: { type: 'href' },
     buttonBgColor: { type: 'color' },
