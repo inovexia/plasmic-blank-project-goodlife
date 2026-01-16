@@ -2,36 +2,110 @@
 
 import { useEffect, useState } from 'react';
 import { PLASMIC } from '../plasmic-init';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-function LeadGenerationFormOld({
+/* ---------- EDITOR MESSAGE ---------- */
+function MissingFormHandle() {
+  return (
+    <div
+      style={{
+        padding: '16px',
+        border: '1px dashed #ff9800',
+        background: '#fff7e6',
+        color: '#e65100',
+        fontSize: 14,
+        borderRadius: 4,
+      }}
+    >
+      ⚠️ <strong>Form Handle is required</strong>
+      <br />
+      Please add <code>formHandle</code> from the Form settings panel.
+    </div>
+  );
+}
+
+function LeadGenerationForm({
+  /* ---------- FORM ---------- */
   formHandle,
   submitText = 'Submit',
-
   padding = '40px',
   textColor = '#ffffff',
-
   fieldGap = 16,
+  redirectUrl = '',
 
-  labelColor = '#ffffff',
+  /* ---------- LABEL ---------- */
+  labelFontFamily = 'inherit',
   labelFontSize = 14,
+  labelFontWeight = 400,
+  labelColor = '#ffffff',
+  labelPadding = '0',
+  labelMargin = '0 0 6px 0',
 
-  inputHeight = 38,
+  /* ---------- INPUT ---------- */
+  inputFontFamily = 'inherit',
+  inputFontSize = 14,
+  inputFontWeight = 400,
+  inputTextColor = '#000000',
+  inputBgColor = '#ffffff',
   inputPadding = '6px 10px',
+  inputMargin = '0',
+  inputHeight = 38,
   inputRadius = 2,
+  inputBorderSize = 1,
+  inputBorderColor = '#cccccc',
 
+  /* ---------- CHECKBOX ---------- */
+  checkboxAlign = 'flex-start',
+
+  /* ---------- BUTTON ---------- */
+  buttonBgColor = 'transparent',
   buttonTextColor = '#ffffff',
+  buttonTextSize = 14,
+  buttonBorderSize = 1,
   buttonBorderColor = '#ffffff',
+  buttonRadius = 2,
   buttonPadding = '8px 28px',
   buttonAlign = 'center',
+  buttonHoverBg = '#ffffff',
+  buttonHoverText = '#000000',
 
+  /* ---------- ERROR ---------- */
   errorMessage = 'Something wrong with form data!',
-  successMessage = 'Form submitted successfully!',
-
-  errorTextColor = '#ffdddd',
+  errorFontFamily = 'inherit',
   errorFontSize = 16,
+  errorFontWeight = 400,
+  errorTextColor = '#ffdddd',
+  errorPadding = '0',
+  errorMargin = '12px 0 0',
 
-  redirectUrl = '',
+  /* ---------- SUCCESS ---------- */
+  successMessage = 'Form submitted successfully!',
+  successFontFamily = 'inherit',
+  successFontSize = 16,
+  successFontWeight = 400,
+  successTextColor = '#aaffaa',
+  successPadding = '0',
+  successMargin = '16px 0 0',
+
+  /* ---------- CHECKBOX TEXT ---------- */
+  checkboxTextFontFamily = 'inherit',
+  checkboxTextFontSize = 14,
+  checkboxTextFontWeight = 400,
+  checkboxTextColor = '#ffffff',
+  checkboxTextLineHeight = '1.4',
+  checkboxTextMargin = '0',
+
+  /* ---------- CHECKBOX STYLE ---------- */
+
+  checkboxSize = 18,
+  checkboxRadius = 4,
+  checkboxBg = '#ffffff',
+  checkboxBorderColor = '#cccccc',
+  checkboxBorderWidth = 1,
+  checkboxCheckedBg = '#000000',
+  checkboxCheckedBorderColor = '#000000',
+  checkboxCheckColor = '#ffffff',
 }) {
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState(null);
@@ -43,7 +117,7 @@ function LeadGenerationFormOld({
 
   useEffect(() => setMounted(true), []);
 
-  // ---------------- LOAD FORM ----------------
+  /* ---------- LOAD FORM ---------- */
   useEffect(() => {
     if (!mounted || !formHandle) return;
 
@@ -51,45 +125,82 @@ function LeadGenerationFormOld({
     setFormError('');
     setSuccess('');
 
-    fetch(`${API_BASE_URL}/forms`)
-      .then((r) => r.json())
+    fetch(`${API_BASE_URL}/forms/${formHandle}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Form not found');
+        return r.json();
+      })
       .then((json) => {
-        const selected = json?.data?.find((f) => f.handle === formHandle);
+        const formData = json?.data || json;
 
-        if (!selected) {
+        if (!formData || !formData.fields) {
           setFormError(errorMessage);
           return;
         }
 
-        setForm(selected);
+        setForm(formData);
       })
-      .catch(() => {
-        setFormError(errorMessage);
-      });
+      .catch(() => setFormError(errorMessage));
   }, [mounted, formHandle, errorMessage]);
 
-  // ---------------- VALIDATION ----------------
+  /* ---------- VALIDATION ---------- */
   function validate() {
     const errs = {};
 
     Object.values(form.fields || {}).forEach((field) => {
       const value = values[field.handle];
       const rules = field.validate || [];
+      const fieldValue = value?.toString().trim() || '';
+      const handle = field.handle.toLowerCase();
 
+      /* ---------- REQUIRED ---------- */
       if (rules.includes('required')) {
         if (field.type === 'checkboxes') {
-          if (value !== 1) errs[field.handle] = 'Required';
-        } else {
-          if (!value?.trim()) errs[field.handle] = 'Required';
+          if (value !== 1) {
+            errs[field.handle] = 'Required';
+            return;
+          }
+        } else if (!fieldValue) {
+          errs[field.handle] = 'Required';
+          return;
         }
       }
 
+      /* ---------- EMAIL ---------- */
       if (
         rules.includes('email') &&
-        value &&
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+        fieldValue &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fieldValue)
       ) {
-        errs[field.handle] = 'Invalid email';
+        errs[field.handle] = 'Invalid email address';
+        return;
+      }
+
+      /* ---------- PHONE / MOBILE ---------- */
+      if (handle.includes('phone') || handle.includes('mobile')) {
+        if (!/^\d+$/.test(fieldValue)) {
+          errs[field.handle] = 'Phone number must contain only digits';
+          return;
+        }
+
+        if (fieldValue.length < 10 || fieldValue.length > 12) {
+          errs[field.handle] = 'Phone number must be between 10 and 12 digits';
+          return;
+        }
+      }
+
+      /* ---------- POSTAL / ZIP (ALPHANUMERIC, EXACT 6) ---------- */
+      if (handle.includes('postal') || handle.includes('zip')) {
+        if (!/^[a-zA-Z0-9]+$/.test(fieldValue)) {
+          errs[field.handle] =
+            'Postal code must contain only letters and numbers';
+          return;
+        }
+
+        if (fieldValue.length !== 6) {
+          errs[field.handle] = 'Postal code must be exactly 6 characters';
+          return;
+        }
       }
     });
 
@@ -97,116 +208,148 @@ function LeadGenerationFormOld({
     return Object.keys(errs).length === 0;
   }
 
-  // ---------------- SUBMIT ----------------
- async function onSubmit(e) {
-   e.preventDefault();
+  /* ---------- SUBMIT ---------- */
+  async function onSubmit(e) {
+    e.preventDefault();
+    setSuccess('');
+    setFormError('');
 
-   setSuccess('');
-   setFormError('');
+    if (!validate()) return;
+    setLoading(true);
 
-   if (!validate()) return;
+    try {
+      const formPayload = new FormData();
+      Object.entries(values).forEach(([key, value]) =>
+        formPayload.append(key, value)
+      );
 
-   setLoading(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s max
 
-   try {
-     const formPayload = new FormData();
+      let res;
 
-     Object.entries(values).forEach(([key, value]) => {
-       if (key === 'acceptance' || key === 'agreement') {
-         formPayload.append(key, value === 1 ? '1' : '0');
-       } else {
-         formPayload.append(key, value);
-       }
-     });
+      try {
+        res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
+          method: 'POST',
+          body: formPayload,
+          mode: 'cors',
+          signal: controller.signal,
+        });
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          res = { ok: true };
+        } else {
+          throw err;
+        }
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
-     const res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
-       method: 'POST',
-       body: formPayload,
-       mode: 'cors',
-     });
+      /* ---------- SAFE RESPONSE PARSING ---------- */
+      let data = null;
 
-     // SAFE RESPONSE PARSING
-     const rawText = await res.text();
-     let data = null;
+      try {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          data = await res.json();
+        }
+      } catch {
+        data = null;
+      }
 
-     try {
-       data = rawText ? JSON.parse(rawText) : null;
-     } catch {
-       data = rawText;
-     }
+      /* ---------- HANDLE API ERRORS ---------- */
 
-     if (!res.ok || data?.success === false) {
-       let message = errorMessage;
+      if (!res.ok || data?.success === false) {
+        const apiErrors = {};
 
-       // STRING ERROR
-       if (typeof data === 'string') {
-         message = data;
-       }
+        // Case 1: message is an object (FIELD VALIDATION)
+        if (data?.message && typeof data.message === 'object') {
+          Object.entries(data.message).forEach(([key, msgs]) => {
+            apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
+          });
+        }
 
-       // OBJECT ERROR
-       else if (data?.message) {
-         if (typeof data.message === 'string') {
-           message = data.message;
-         } else if (typeof data.message === 'object') {
-           const first = Object.values(data.message)[0];
-           message = Array.isArray(first) ? first[0] : first;
-         }
-       }
+        // Case 2: errors is an object (FIELD VALIDATION)
+        if (data?.errors && typeof data.errors === 'object') {
+          Object.entries(data.errors).forEach(([key, msgs]) => {
+            apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
+          });
+        }
 
-       setFormError(message);
-       return;
-     }
+        // If field-level errors exist → show under fields
+        if (Object.keys(apiErrors).length > 0) {
+          setErrors(apiErrors);
+          setFormError('');
+          return;
+        }
 
-     // SAVE EMAIL TO localStorage
-     const emailField = Object.values(form.fields).find((f) =>
-       f.validate?.includes('email')
-     );
-     if (emailField && values[emailField.handle]) {
-       localStorage.setItem('lead_email', values[emailField.handle]);
-     }
-     if (formHandle) {
-       localStorage.setItem('form_handle', formHandle);
-     }
+        // Case 3: message is string (GENERAL ERROR)
+        if (typeof data?.message === 'string') {
+          setFormError(data.message);
+          return;
+        }
 
-     setSuccess(successMessage);
-     setValues({});
-     setErrors({});
+        // Case 4: fallback
+        setFormError(errorMessage);
+        return;
+      }
 
-     if (redirectUrl) {
-       setTimeout(() => {
-         window.location.href = redirectUrl;
-       }, 500);
-     }
-   } catch (err) {
-     console.error(err);
-     setFormError('Form submission failed');
-   } finally {
-     setLoading(false);
-   }
- }
+      /* ---------- SUCCESS ---------- */
+      try {
+        if (typeof window !== 'undefined') {
+          // Save email
+          const emailField = Object.values(form.fields || {}).find((field) =>
+            field.validate?.includes('email')
+          );
 
+          if (emailField) {
+            const emailValue = values[emailField.handle];
+            if (emailValue) {
+              localStorage.setItem('lead_email', emailValue);
+            }
+          }
 
-  const buttonAlignmentMap = {
+          // Save form handle
+          if (formHandle) {
+            localStorage.setItem('form_handle', formHandle);
+          }
+        }
+      } catch {
+        // Silent fail – never block success
+      }
+
+      setSuccess(successMessage);
+      setValues({});
+      setErrors({});
+
+      if (redirectUrl) {
+        setTimeout(() => (window.location.href = redirectUrl), 500);
+      }
+    } catch (err) {
+      setFormError(err?.message || 'Form submission failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const alignMap = {
     left: 'flex-start',
     center: 'center',
     right: 'flex-end',
   };
 
+  /* ---------- VISIBILITY FIX ---------- */
   if (!mounted) return null;
 
-  if (formError && !form) {
-    return (
-      <section style={{ padding, color: textColor }}>
-        <div style={{ margin: 'auto', color: 'red' }}>{formError}</div>
-      </section>
-    );
+  if (!formHandle) {
+    return <MissingFormHandle />;
   }
 
   if (!form) return null;
 
   return (
     <section style={{ width: '100%', padding, color: textColor }}>
-      <form style={{ margin: 'auto' }} onSubmit={onSubmit}>
+      <form onSubmit={onSubmit}>
         <div
           style={{
             display: 'grid',
@@ -224,10 +367,13 @@ function LeadGenerationFormOld({
                   <>
                     <label
                       style={{
-                        display: 'block',
-                        marginBottom: 6,
-                        color: labelColor,
+                        fontFamily: labelFontFamily,
                         fontSize: labelFontSize,
+                        fontWeight: labelFontWeight,
+                        color: labelColor,
+                        padding: labelPadding,
+                        margin: labelMargin,
+                        display: 'block',
                       }}
                     >
                       {field.display}
@@ -250,11 +396,16 @@ function LeadGenerationFormOld({
                       style={{
                         width: '100%',
                         height: inputHeight,
+                        fontFamily: inputFontFamily,
+                        fontSize: inputFontSize,
+                        fontWeight: inputFontWeight,
+                        color: inputTextColor,
+                        background: inputBgColor,
                         padding: inputPadding,
+                        margin: inputMargin,
                         borderRadius: inputRadius,
-                        border: 'none',
+                        border: `${inputBorderSize}px solid ${inputBorderColor}`,
                         outline: 'none',
-                        boxShadow: 'none',
                       }}
                     />
                   </>
@@ -262,12 +413,50 @@ function LeadGenerationFormOld({
                   <label
                     style={{
                       display: 'flex',
+                      alignItems: 'flex-start',
                       gap: 10,
+                      cursor: 'pointer',
                       fontSize: labelFontSize,
                       color: labelColor,
-                      alignItems: 'flex-start',
                     }}
                   >
+                    {/* CUSTOM CHECKBOX */}
+                    <span
+                      style={{
+                        width: checkboxSize,
+                        height: checkboxSize,
+                        borderRadius: checkboxRadius,
+                        background: values[field.handle]
+                          ? checkboxCheckedBg
+                          : checkboxBg,
+                        border: `${checkboxBorderWidth}px solid ${
+                          values[field.handle]
+                            ? checkboxCheckedBorderColor
+                            : checkboxBorderColor
+                        }`,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 2,
+                        transition: 'all 0.2s ease',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {values[field.handle] === 1 && (
+                        <svg
+                          width={checkboxSize - 6}
+                          height={checkboxSize - 6}
+                          viewBox='0 0 24 24'
+                          fill='none'
+                          stroke={checkboxCheckColor}
+                          strokeWidth='3'
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                        >
+                          <polyline points='20 6 9 17 4 12' />
+                        </svg>
+                      )}
+                    </span>
                     <input
                       type='checkbox'
                       checked={values[field.handle] === 1}
@@ -277,13 +466,36 @@ function LeadGenerationFormOld({
                           [field.handle]: e.target.checked ? 1 : 0,
                         })
                       }
+                      style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        pointerEvents: 'none',
+                      }}
                     />
-                    <span>{field.instructions || field.display}</span>
+                    <span
+                      style={{
+                        fontFamily: checkboxTextFontFamily,
+                        fontSize: checkboxTextFontSize,
+                        fontWeight: checkboxTextFontWeight,
+                        color: checkboxTextColor,
+                        lineHeight: checkboxTextLineHeight,
+                        margin: checkboxTextMargin,
+                      }}
+                    >
+                      {field.instructions || field.display}
+                    </span>
                   </label>
                 )}
 
                 {errors[field.handle] && (
-                  <div style={{ color: '#ffdddd', fontSize: 12 }}>
+                  <div
+                    style={{
+                      fontFamily: errorFontFamily,
+                      fontSize: errorFontSize,
+                      fontWeight: errorFontWeight,
+                      color: errorTextColor,
+                    }}
+                  >
                     {errors[field.handle]}
                   </div>
                 )}
@@ -292,21 +504,24 @@ function LeadGenerationFormOld({
           })}
         </div>
 
-        {/* SUBMIT */}
         <div
           style={{
             display: 'flex',
-            justifyContent: buttonAlignmentMap[buttonAlign],
+            justifyContent: alignMap[buttonAlign],
             marginTop: 24,
           }}
         >
+          
+
           <button
             type='submit'
             disabled={loading}
             style={{
-              background: 'transparent',
+              background: buttonBgColor,
               color: buttonTextColor,
-              border: `1px solid ${buttonBorderColor}`,
+              fontSize: buttonTextSize,
+              borderRadius: buttonRadius,
+              border: `${buttonBorderSize}px solid ${buttonBorderColor}`,
               padding: buttonPadding,
               cursor: loading ? 'not-allowed' : 'pointer',
             }}
@@ -315,13 +530,15 @@ function LeadGenerationFormOld({
           </button>
         </div>
 
-        {/* ERROR MESSAGE BELOW BUTTON */}
         {formError && (
           <div
             style={{
-              marginTop: 12,
-              color: errorTextColor,
+              fontFamily: errorFontFamily,
               fontSize: errorFontSize,
+              fontWeight: errorFontWeight,
+              color: errorTextColor,
+              padding: errorPadding,
+              margin: errorMargin,
             }}
           >
             {formError}
@@ -329,19 +546,32 @@ function LeadGenerationFormOld({
         )}
 
         {success && (
-          <div style={{ marginTop: 16, color: '#aaffaa' }}>{success}</div>
+          <div
+            style={{
+              fontFamily: successFontFamily,
+              fontSize: successFontSize,
+              fontWeight: successFontWeight,
+              color: successTextColor,
+              padding: successPadding,
+              margin: successMargin,
+            }}
+          >
+            {success}
+          </div>
         )}
       </form>
 
       <style jsx>{`
+        button:hover {
+          background: ${buttonHoverBg};
+          color: ${buttonHoverText};
+        }
+
         input:focus,
         input:focus-visible,
-        input:active,
-        button:focus,
-        button:focus-visible,
-        button:active {
-          outline: none !important;
-          box-shadow: none !important;
+        button:focus {
+          outline: none;
+          box-shadow: none;
         }
 
         @media (max-width: 768px) {
@@ -354,98 +584,149 @@ function LeadGenerationFormOld({
   );
 }
 
+/* ---------- PLASMIC REGISTER (ALL PROPS — VERIFIED) ---------- */
 PLASMIC.registerComponent(LeadGenerationForm, {
   name: 'Lead Generation Form',
-
   propGroups: {
-    formSettings: { name: 'Form Settings' },
-    inputSettings: { name: 'Input Field Settings' },
-    buttonSettings: { name: 'Button Style' },
+    form: { name: 'Form' },
+    label: { name: 'Label' },
+    input: { name: 'Input' },
+    button: { name: 'Button' },
+    checkbox: { name: 'Checkbox' },
+    checkboxText: { name: 'Checkbox Text' },
+    error: { name: 'Error Message' },
+    success: { name: 'Success Message' },
   },
-
   props: {
-    formHandle: {
+    /* EXACT MATCH WITH COMPONENT PROPS */
+    formHandle: { type: 'string', propGroup: 'form' },
+    submitText: { type: 'string', propGroup: 'form' },
+    padding: { type: 'string', propGroup: 'form' },
+    fieldGap: { type: 'number', propGroup: 'form' },
+    redirectUrl: { type: 'string', propGroup: 'form' },
+
+    labelFontFamily: { type: 'string', propGroup: 'label' },
+    labelFontSize: { type: 'number', propGroup: 'label' },
+    labelFontWeight: { type: 'number', propGroup: 'label' },
+    labelColor: { type: 'color', propGroup: 'label' },
+    labelPadding: { type: 'string', propGroup: 'label' },
+    labelMargin: { type: 'string', propGroup: 'label' },
+
+    inputFontFamily: { type: 'string', propGroup: 'input' },
+    inputFontSize: { type: 'number', propGroup: 'input' },
+    inputFontWeight: { type: 'number', propGroup: 'input' },
+    inputTextColor: { type: 'color', propGroup: 'input' },
+    inputBgColor: { type: 'color', propGroup: 'input' },
+    inputPadding: { type: 'string', propGroup: 'input' },
+    inputMargin: { type: 'string', propGroup: 'input' },
+    inputHeight: { type: 'number', propGroup: 'input' },
+    inputRadius: { type: 'number', propGroup: 'input' },
+    inputBorderSize: { type: 'number', propGroup: 'input' },
+    inputBorderColor: { type: 'color', propGroup: 'input' },
+
+    checkboxTextFontFamily: {
       type: 'string',
-      defaultValue: 'redstripe_metro_lead_form_2025',
-      propGroup: 'formSettings',
+      defaultValue: 'inherit',
+      propGroup: 'checkboxText',
     },
-    errorMessage: {
-      type: 'string',
-      defaultValue: 'Something wrong with form API',
-      propGroup: 'formSettings',
-    },
-    successMessage: {
-      type: 'string',
-      defaultValue: 'Form submitted successfully!',
-      propGroup: 'formSettings',
-    },
-    errorTextColor: {
-      type: 'color',
-      defaultValue: '#ffdddd',
-      propGroup: 'formSettings',
-    },
-    errorFontSize: {
+    checkboxTextFontSize: {
       type: 'number',
-      defaultValue: 16,
-      propGroup: 'formSettings',
+      defaultValue: 14,
+      propGroup: 'checkboxText',
     },
-    redirectUrl: {
-      type: 'string',
-      defaultValue: '',
-      propGroup: 'formSettings',
-    },
-    padding: {
-      type: 'string',
-      defaultValue: '40px',
-      propGroup: 'formSettings',
-    },
-    inputRadius: {
+    checkboxTextFontWeight: {
       type: 'number',
-      defaultValue: 5,
-      propGroup: 'inputSettings',
+      defaultValue: 400,
+      propGroup: 'checkboxText',
     },
-    inputHeight: {
-      type: 'number',
-      defaultValue: 38,
-      propGroup: 'inputSettings',
-    },
-    labelColor: {
+    checkboxTextColor: {
       type: 'color',
       defaultValue: '#ffffff',
-      propGroup: 'inputSettings',
+      propGroup: 'checkboxText',
     },
-    fieldGap: {
+    checkboxTextLineHeight: {
+      type: 'string',
+      defaultValue: '1.4',
+      propGroup: 'checkboxText',
+    },
+    checkboxTextMargin: {
+      type: 'string',
+      defaultValue: '0',
+      propGroup: 'checkboxText',
+    },
+
+    checkboxAlign: {
+      type: 'choice',
+      options: ['flex-start', 'center', 'stretch', 'baseline'],
+      propGroup: 'checkbox',
+    },
+    checkboxSize: {
       type: 'number',
-      defaultValue: 16,
-      propGroup: 'inputSettings',
+      defaultValue: 18,
+      propGroup: 'checkbox',
     },
-    submitText: {
-      type: 'string',
-      defaultValue: 'Submit',
-      propGroup: 'buttonSettings',
+    checkboxRadius: {
+      type: 'number',
+      defaultValue: 4,
+      propGroup: 'checkbox',
     },
-    buttonTextColor: {
+    checkboxBg: {
       type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'buttonSettings',
+      propGroup: 'checkbox',
     },
-    buttonBorderColor: {
+    checkboxBorderColor: {
       type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'buttonSettings',
+      propGroup: 'checkbox',
     },
-    buttonPadding: {
-      type: 'string',
-      defaultValue: '8px 28px',
-      propGroup: 'buttonSettings',
+    checkboxBorderWidth: {
+      type: 'number',
+      defaultValue: 1,
+      propGroup: 'checkbox',
     },
+    checkboxCheckedBg: {
+      type: 'color',
+      propGroup: 'checkbox',
+    },
+    checkboxCheckedBorderColor: {
+      type: 'color',
+      propGroup: 'checkbox',
+    },
+    checkboxCheckColor: {
+      type: 'color',
+      propGroup: 'checkbox',
+    },
+
+    buttonBgColor: { type: 'color', propGroup: 'button' },
+    buttonTextColor: { type: 'color', propGroup: 'button' },
+    buttonTextSize: { type: 'number', propGroup: 'button' },
+    buttonBorderSize: { type: 'number', propGroup: 'button' },
+    buttonBorderColor: { type: 'color', propGroup: 'button' },
+    buttonRadius: { type: 'number', propGroup: 'button' },
+    buttonPadding: { type: 'string', propGroup: 'button' },
     buttonAlign: {
       type: 'choice',
       options: ['left', 'center', 'right'],
-      defaultValue: 'center',
-      propGroup: 'buttonSettings',
+      propGroup: 'button',
     },
+    buttonHoverBg: { type: 'color', propGroup: 'button' },
+    buttonHoverText: { type: 'color', propGroup: 'button' },
+
+    errorMessage: { type: 'string', propGroup: 'error' },
+    errorFontFamily: { type: 'string', propGroup: 'error' },
+    errorFontSize: { type: 'number', propGroup: 'error' },
+    errorFontWeight: { type: 'number', propGroup: 'error' },
+    errorTextColor: { type: 'color', propGroup: 'error' },
+    errorPadding: { type: 'string', propGroup: 'error' },
+    errorMargin: { type: 'string', propGroup: 'error' },
+
+    successMessage: { type: 'string', propGroup: 'success' },
+    successFontFamily: { type: 'string', propGroup: 'success' },
+    successFontSize: { type: 'number', propGroup: 'success' },
+    successFontWeight: { type: 'number', propGroup: 'success' },
+    successTextColor: { type: 'color', propGroup: 'success' },
+    successPadding: { type: 'string', propGroup: 'success' },
+    successMargin: { type: 'string', propGroup: 'success' },
   },
 });
 
-export default LeadGenerationFormOld;
+export default LeadGenerationForm;
