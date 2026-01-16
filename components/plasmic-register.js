@@ -5,3 +5,4 @@ import './PlasmicRuntime';
 import './PrizeScratchCard';
 import './QuizFlow';
 import './LeadGenerationForm';
+import './LeadFormWithCaptcha';

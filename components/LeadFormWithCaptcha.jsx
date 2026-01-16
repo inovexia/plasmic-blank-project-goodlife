@@ -1,9 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { PLASMIC } from '../plasmic-init';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+/* ---------- FALLBACK CAPTCHA GENERATOR ---------- */
+function generateCaptcha(length = 5) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from(
+    { length },
+    () => chars[Math.floor(Math.random() * chars.length)]
+  ).join('');
+}
 
 /* ---------- EDITOR MESSAGE ---------- */
 function MissingFormHandle() {
@@ -25,7 +35,7 @@ function MissingFormHandle() {
   );
 }
 
-function LeadGenerationForm({
+function LeadFormWithCaptcha({
   /* ---------- FORM ---------- */
   formHandle,
   submitText = 'Submit',
@@ -33,6 +43,11 @@ function LeadGenerationForm({
   textColor = '#ffffff',
   fieldGap = 16,
   redirectUrl = '',
+
+  /* ---------- RECAPTCHA ---------- */
+  enableRecaptcha = true,
+  recaptchaVersion = 'v2',
+  recaptchaSiteKey = '',
 
   /* ---------- LABEL ---------- */
   labelFontFamily = 'inherit',
@@ -97,7 +112,6 @@ function LeadGenerationForm({
   checkboxTextMargin = '0',
 
   /* ---------- CHECKBOX STYLE ---------- */
-
   checkboxSize = 18,
   checkboxRadius = 4,
   checkboxBg = '#ffffff',
@@ -115,7 +129,16 @@ function LeadGenerationForm({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
 
-  useEffect(() => setMounted(true), []);
+  /* ---------- CAPTCHA STATE ---------- */
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [fallbackCode, setFallbackCode] = useState('');
+  const [fallbackInput, setFallbackInput] = useState('');
+  const recaptchaRef = useRef(null);
+
+  useEffect(() => {
+    setMounted(true);
+    setFallbackCode(generateCaptcha());
+  }, []);
 
   /* ---------- LOAD FORM ---------- */
   useEffect(() => {
@@ -143,6 +166,22 @@ function LeadGenerationForm({
       .catch(() => setFormError(errorMessage));
   }, [mounted, formHandle, errorMessage]);
 
+  /* ---------- CAPTCHA HANDLERS ---------- */
+  function onRecaptchaVerify() {
+    setCaptchaVerified(true);
+  }
+
+  function verifyFallbackCaptcha() {
+    if (fallbackInput.toUpperCase() === fallbackCode) {
+      setCaptchaVerified(true);
+    } else {
+      setCaptchaVerified(false);
+      setFallbackCode(generateCaptcha());
+      setFallbackInput('');
+      alert('Captcha incorrect. Try again.');
+    }
+  }
+
   /* ---------- VALIDATION ---------- */
   function validate() {
     const errs = {};
@@ -153,7 +192,6 @@ function LeadGenerationForm({
       const fieldValue = value?.toString().trim() || '';
       const handle = field.handle.toLowerCase();
 
-      /* ---------- REQUIRED ---------- */
       if (rules.includes('required')) {
         if (field.type === 'checkboxes') {
           if (value !== 1) {
@@ -166,7 +204,6 @@ function LeadGenerationForm({
         }
       }
 
-      /* ---------- EMAIL ---------- */
       if (
         rules.includes('email') &&
         fieldValue &&
@@ -176,7 +213,6 @@ function LeadGenerationForm({
         return;
       }
 
-      /* ---------- PHONE / MOBILE ---------- */
       if (handle.includes('phone') || handle.includes('mobile')) {
         if (!/^\d+$/.test(fieldValue)) {
           errs[field.handle] = 'Phone number must contain only digits';
@@ -189,7 +225,6 @@ function LeadGenerationForm({
         }
       }
 
-      /* ---------- POSTAL / ZIP (ALPHANUMERIC, EXACT 6) ---------- */
       if (handle.includes('postal') || handle.includes('zip')) {
         if (!/^[a-zA-Z0-9]+$/.test(fieldValue)) {
           errs[field.handle] =
@@ -214,6 +249,11 @@ function LeadGenerationForm({
     setSuccess('');
     setFormError('');
 
+    if (enableRecaptcha && !captchaVerified) {
+      setFormError('Please verify captcha first');
+      return;
+    }
+
     if (!validate()) return;
     setLoading(true);
 
@@ -224,7 +264,7 @@ function LeadGenerationForm({
       );
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s max
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
 
       let res;
 
@@ -245,7 +285,6 @@ function LeadGenerationForm({
         clearTimeout(timeoutId);
       }
 
-      /* ---------- SAFE RESPONSE PARSING ---------- */
       let data = null;
 
       try {
@@ -257,47 +296,38 @@ function LeadGenerationForm({
         data = null;
       }
 
-      /* ---------- HANDLE API ERRORS ---------- */
-
       if (!res.ok || data?.success === false) {
         const apiErrors = {};
 
-        // Case 1: message is an object (FIELD VALIDATION)
         if (data?.message && typeof data.message === 'object') {
           Object.entries(data.message).forEach(([key, msgs]) => {
             apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
           });
         }
 
-        // Case 2: errors is an object (FIELD VALIDATION)
         if (data?.errors && typeof data.errors === 'object') {
           Object.entries(data.errors).forEach(([key, msgs]) => {
             apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
           });
         }
 
-        // If field-level errors exist → show under fields
         if (Object.keys(apiErrors).length > 0) {
           setErrors(apiErrors);
           setFormError('');
           return;
         }
 
-        // Case 3: message is string (GENERAL ERROR)
         if (typeof data?.message === 'string') {
           setFormError(data.message);
           return;
         }
 
-        // Case 4: fallback
         setFormError(errorMessage);
         return;
       }
 
-      /* ---------- SUCCESS ---------- */
       try {
         if (typeof window !== 'undefined') {
-          // Save email
           const emailField = Object.values(form.fields || {}).find((field) =>
             field.validate?.includes('email')
           );
@@ -309,14 +339,11 @@ function LeadGenerationForm({
             }
           }
 
-          // Save form handle
           if (formHandle) {
             localStorage.setItem('form_handle', formHandle);
           }
         }
-      } catch {
-        // Silent fail – never block success
-      }
+      } catch {}
 
       setSuccess(successMessage);
       setValues({});
@@ -338,13 +365,8 @@ function LeadGenerationForm({
     right: 'flex-end',
   };
 
-  /* ---------- VISIBILITY FIX ---------- */
   if (!mounted) return null;
-
-  if (!formHandle) {
-    return <MissingFormHandle />;
-  }
-
+  if (!formHandle) return <MissingFormHandle />;
   if (!form) return null;
 
   return (
@@ -363,6 +385,7 @@ function LeadGenerationForm({
 
             return (
               <div key={field.handle} style={{ gridColumn: colSpan }}>
+                {/* FORM FIELD UI — UNCHANGED */}
                 {!isCheckbox ? (
                   <>
                     <label
@@ -420,7 +443,6 @@ function LeadGenerationForm({
                       color: labelColor,
                     }}
                   >
-                    {/* CUSTOM CHECKBOX */}
                     <span
                       style={{
                         width: checkboxSize,
@@ -457,6 +479,7 @@ function LeadGenerationForm({
                         </svg>
                       )}
                     </span>
+
                     <input
                       type='checkbox'
                       checked={values[field.handle] === 1}
@@ -472,6 +495,7 @@ function LeadGenerationForm({
                         pointerEvents: 'none',
                       }}
                     />
+
                     <span
                       style={{
                         fontFamily: checkboxTextFontFamily,
@@ -504,6 +528,57 @@ function LeadGenerationForm({
           })}
         </div>
 
+        {/* ---------- CAPTCHA UI ---------- */}
+        {enableRecaptcha && (
+          <div style={{ marginTop: 24 }}>
+            {recaptchaSiteKey ? (
+              recaptchaVersion === 'v2' ? (
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={recaptchaSiteKey}
+                  onChange={onRecaptchaVerify}
+                />
+              ) : (
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={recaptchaSiteKey}
+                  size='invisible'
+                  onChange={onRecaptchaVerify}
+                />
+              )
+            ) : (
+              <div>
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    letterSpacing: 4,
+                    background: '#222',
+                    color: '#fff',
+                    padding: 10,
+                    display: 'inline-block',
+                  }}
+                >
+                  {fallbackCode}
+                </div>
+                <input
+                  placeholder='Enter captcha'
+                  value={fallbackInput}
+                  onChange={(e) => setFallbackInput(e.target.value)}
+                  style={{ marginLeft: 10, padding: 6 }}
+                />
+                <button
+                  type='button'
+                  onClick={verifyFallbackCaptcha}
+                  style={{ marginLeft: 10 }}
+                >
+                  Verify
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div
           style={{
             display: 'flex',
@@ -513,7 +588,7 @@ function LeadGenerationForm({
         >
           <button
             type='submit'
-            disabled={loading}
+            disabled={loading || (enableRecaptcha && !captchaVerified)}
             style={{
               background: buttonBgColor,
               color: buttonTextColor,
@@ -521,7 +596,10 @@ function LeadGenerationForm({
               borderRadius: buttonRadius,
               border: `${buttonBorderSize}px solid ${buttonBorderColor}`,
               padding: buttonPadding,
-              cursor: loading ? 'not-allowed' : 'pointer',
+              cursor:
+                loading || (enableRecaptcha && !captchaVerified)
+                  ? 'not-allowed'
+                  : 'pointer',
             }}
           >
             {loading ? 'Submitting…' : submitText}
@@ -583,10 +661,11 @@ function LeadGenerationForm({
 }
 
 /* ---------- PLASMIC REGISTER (ALL PROPS — VERIFIED) ---------- */
-PLASMIC.registerComponent(LeadGenerationForm, {
+PLASMIC.registerComponent(LeadFormWithCaptcha, {
   name: 'Lead Generation Form',
   propGroups: {
     form: { name: 'Form' },
+    recaptcha: { name: 'reCAPTCHA' },
     label: { name: 'Label' },
     input: { name: 'Input' },
     button: { name: 'Button' },
@@ -596,12 +675,27 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     success: { name: 'Success Message' },
   },
   props: {
-    /* EXACT MATCH WITH COMPONENT PROPS */
     formHandle: { type: 'string', propGroup: 'form' },
     submitText: { type: 'string', propGroup: 'form' },
     padding: { type: 'string', propGroup: 'form' },
     fieldGap: { type: 'number', propGroup: 'form' },
     redirectUrl: { type: 'string', propGroup: 'form' },
+
+    enableRecaptcha: {
+      type: 'boolean',
+      defaultValue: true,
+      propGroup: 'recaptcha',
+    },
+    recaptchaVersion: {
+      type: 'choice',
+      options: ['v2', 'v3'],
+      defaultValue: 'v2',
+      propGroup: 'recaptcha',
+    },
+    recaptchaSiteKey: {
+      type: 'string',
+      propGroup: 'recaptcha',
+    },
 
     labelFontFamily: { type: 'string', propGroup: 'label' },
     labelFontSize: { type: 'number', propGroup: 'label' },
@@ -621,78 +715,6 @@ PLASMIC.registerComponent(LeadGenerationForm, {
     inputRadius: { type: 'number', propGroup: 'input' },
     inputBorderSize: { type: 'number', propGroup: 'input' },
     inputBorderColor: { type: 'color', propGroup: 'input' },
-
-    checkboxTextFontFamily: {
-      type: 'string',
-      defaultValue: 'inherit',
-      propGroup: 'checkboxText',
-    },
-    checkboxTextFontSize: {
-      type: 'number',
-      defaultValue: 14,
-      propGroup: 'checkboxText',
-    },
-    checkboxTextFontWeight: {
-      type: 'number',
-      defaultValue: 400,
-      propGroup: 'checkboxText',
-    },
-    checkboxTextColor: {
-      type: 'color',
-      defaultValue: '#ffffff',
-      propGroup: 'checkboxText',
-    },
-    checkboxTextLineHeight: {
-      type: 'string',
-      defaultValue: '1.4',
-      propGroup: 'checkboxText',
-    },
-    checkboxTextMargin: {
-      type: 'string',
-      defaultValue: '0',
-      propGroup: 'checkboxText',
-    },
-
-    checkboxAlign: {
-      type: 'choice',
-      options: ['flex-start', 'center', 'stretch', 'baseline'],
-      propGroup: 'checkbox',
-    },
-    checkboxSize: {
-      type: 'number',
-      defaultValue: 18,
-      propGroup: 'checkbox',
-    },
-    checkboxRadius: {
-      type: 'number',
-      defaultValue: 4,
-      propGroup: 'checkbox',
-    },
-    checkboxBg: {
-      type: 'color',
-      propGroup: 'checkbox',
-    },
-    checkboxBorderColor: {
-      type: 'color',
-      propGroup: 'checkbox',
-    },
-    checkboxBorderWidth: {
-      type: 'number',
-      defaultValue: 1,
-      propGroup: 'checkbox',
-    },
-    checkboxCheckedBg: {
-      type: 'color',
-      propGroup: 'checkbox',
-    },
-    checkboxCheckedBorderColor: {
-      type: 'color',
-      propGroup: 'checkbox',
-    },
-    checkboxCheckColor: {
-      type: 'color',
-      propGroup: 'checkbox',
-    },
 
     buttonBgColor: { type: 'color', propGroup: 'button' },
     buttonTextColor: { type: 'color', propGroup: 'button' },
@@ -727,4 +749,4 @@ PLASMIC.registerComponent(LeadGenerationForm, {
   },
 });
 
-export default LeadGenerationForm;
+export default LeadFormWithCaptcha;
