@@ -48,6 +48,7 @@ function LeadFormWithCaptcha({
   enableRecaptcha = true,
   recaptchaVersion = 'v2',
   recaptchaSiteKey = '',
+  recaptchaAlign = 'left', // NEW
 
   /* ---------- LABEL ---------- */
   labelFontFamily = 'inherit',
@@ -385,7 +386,6 @@ function LeadFormWithCaptcha({
 
             return (
               <div key={field.handle} style={{ gridColumn: colSpan }}>
-                {/* FORM FIELD UI — UNCHANGED */}
                 {!isCheckbox ? (
                   <>
                     <label
@@ -530,7 +530,13 @@ function LeadFormWithCaptcha({
 
         {/* ---------- CAPTCHA UI ---------- */}
         {enableRecaptcha && (
-          <div style={{ marginTop: 24 }}>
+          <div
+            style={{
+              marginTop: 24,
+              display: 'flex',
+              justifyContent: alignMap[recaptchaAlign], // NEW
+            }}
+          >
             {recaptchaSiteKey ? (
               recaptchaVersion === 'v2' ? (
                 <ReCAPTCHA
@@ -694,6 +700,12 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     },
     recaptchaSiteKey: {
       type: 'string',
+      propGroup: 'recaptcha',
+    },
+    recaptchaAlign: {
+      type: 'choice',
+      options: ['left', 'center', 'right'],
+      defaultValue: 'left',
       propGroup: 'recaptcha',
     },
 
