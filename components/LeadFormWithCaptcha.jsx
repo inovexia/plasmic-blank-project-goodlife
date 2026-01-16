@@ -662,7 +662,7 @@ function LeadFormWithCaptcha({
 
 /* ---------- PLASMIC REGISTER (ALL PROPS — VERIFIED) ---------- */
 PLASMIC.registerComponent(LeadFormWithCaptcha, {
-  name: 'Lead Generation Form',
+  name: 'Lead Form With Google Captcha',
   propGroups: {
     form: { name: 'Form' },
     recaptcha: { name: 'reCAPTCHA' },
