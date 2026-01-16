@@ -275,7 +275,7 @@ export default function PrizeScratchCard(props) {
               : 'Thank you for participating! Better luck next time 🎉'}
           </p>
 
-          <a href={buttonLink} target="_blank" rel="noopener noreferrer">
+          <a href={buttonLink} rel="noopener noreferrer">
             <button
               style={{
                 background: buttonBgColor,
