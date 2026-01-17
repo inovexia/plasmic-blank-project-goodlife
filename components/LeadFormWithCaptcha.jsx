@@ -132,6 +132,7 @@ function LeadFormWithCaptcha({
 
   /* ---------- CAPTCHA STATE ---------- */
   const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
   const [fallbackCode, setFallbackCode] = useState('');
   const [fallbackInput, setFallbackInput] = useState('');
   const recaptchaRef = useRef(null);
@@ -181,19 +182,26 @@ function LeadFormWithCaptcha({
         }),
       });
 
-
       const data = await res.json();
 
       if (data.success) {
         setCaptchaVerified(true);
+
+        // Continue submit flow for v3
+        if (recaptchaVersion === 'v3' && pendingSubmit) {
+          setPendingSubmit(false);
+          document.querySelector('form')?.requestSubmit();
+        }
       } else {
         setCaptchaVerified(false);
+        setPendingSubmit(false);
         alert('Captcha verification failed. Try again.');
         recaptchaRef.current?.reset();
       }
     } catch (err) {
       console.error('Captcha verify error', err);
       setCaptchaVerified(false);
+      setPendingSubmit(false);
       recaptchaRef.current?.reset();
     }
   }
@@ -258,7 +266,20 @@ function LeadFormWithCaptcha({
     setSuccess('');
     setFormError('');
 
-    if (enableRecaptcha && !captchaVerified) {
+    // ---- V3 FLOW ----
+    if (
+      enableRecaptcha &&
+      recaptchaVersion === 'v3' &&
+      !captchaVerified &&
+      !pendingSubmit
+    ) {
+      setPendingSubmit(true);
+      recaptchaRef.current?.execute();
+      return;
+    }
+
+    // ---- V2 FLOW ----
+    if (enableRecaptcha && recaptchaVersion === 'v2' && !captchaVerified) {
       setFormError('Please verify captcha first');
       return;
     }
@@ -334,6 +355,7 @@ function LeadFormWithCaptcha({
       setSuccess(successMessage);
       setValues({});
       setErrors({});
+      setCaptchaVerified(false);
 
       if (redirectUrl)
         setTimeout(() => (window.location.href = redirectUrl), 500);
@@ -560,7 +582,10 @@ function LeadFormWithCaptcha({
         >
           <button
             type='submit'
-            disabled={loading || (enableRecaptcha && !captchaVerified)}
+            disabled={
+              loading ||
+              (enableRecaptcha && recaptchaVersion === 'v2' && !captchaVerified)
+            }
             style={{
               background: buttonBgColor,
               color: buttonTextColor,
@@ -569,7 +594,10 @@ function LeadFormWithCaptcha({
               border: `${buttonBorderSize}px solid ${buttonBorderColor}`,
               padding: buttonPadding,
               cursor:
-                loading || (enableRecaptcha && !captchaVerified)
+                loading ||
+                (enableRecaptcha &&
+                  recaptchaVersion === 'v2' &&
+                  !captchaVerified)
                   ? 'not-allowed'
                   : 'pointer',
             }}
@@ -612,7 +640,7 @@ function LeadFormWithCaptcha({
   );
 }
 
-/* ---------- PLASMIC REGISTER (ALL PROPS) ---------- */
+/* ---------- PLASMIC REGISTER (UNCHANGED) ---------- */
 PLASMIC.registerComponent(LeadFormWithCaptcha, {
   name: 'Lead Form With Google Captcha',
   propGroups: {
@@ -627,20 +655,31 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     success: { name: 'Success Message' },
   },
   props: {
-    /* ---------- FORM ---------- */
     formHandle: { type: 'string', propGroup: 'form' },
     submitText: { type: 'string', propGroup: 'form' },
     padding: { type: 'string', propGroup: 'form' },
     fieldGap: { type: 'number', propGroup: 'form' },
     redirectUrl: { type: 'string', propGroup: 'form' },
 
-    /* ---------- RECAPTCHA ---------- */
-    enableRecaptcha: { type: 'boolean', defaultValue: true, propGroup: 'recaptcha' },
-    recaptchaVersion: { type: 'choice', options: ['v2', 'v3'], defaultValue: 'v2', propGroup: 'recaptcha' },
+    enableRecaptcha: {
+      type: 'boolean',
+      defaultValue: true,
+      propGroup: 'recaptcha',
+    },
+    recaptchaVersion: {
+      type: 'choice',
+      options: ['v2', 'v3'],
+      defaultValue: 'v2',
+      propGroup: 'recaptcha',
+    },
     recaptchaSiteKey: { type: 'string', propGroup: 'recaptcha' },
-    recaptchaAlign: { type: 'choice', options: ['left', 'center', 'right'], defaultValue: 'left', propGroup: 'recaptcha' },
+    recaptchaAlign: {
+      type: 'choice',
+      options: ['left', 'center', 'right'],
+      defaultValue: 'left',
+      propGroup: 'recaptcha',
+    },
 
-    /* ---------- LABEL ---------- */
     labelFontFamily: { type: 'string', propGroup: 'label' },
     labelFontSize: { type: 'number', propGroup: 'label' },
     labelFontWeight: { type: 'number', propGroup: 'label' },
@@ -648,7 +687,6 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     labelPadding: { type: 'string', propGroup: 'label' },
     labelMargin: { type: 'string', propGroup: 'label' },
 
-    /* ---------- INPUT ---------- */
     inputFontFamily: { type: 'string', propGroup: 'input' },
     inputFontSize: { type: 'number', propGroup: 'input' },
     inputFontWeight: { type: 'number', propGroup: 'input' },
@@ -661,7 +699,6 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     inputBorderSize: { type: 'number', propGroup: 'input' },
     inputBorderColor: { type: 'color', propGroup: 'input' },
 
-    /* ---------- BUTTON ---------- */
     buttonBgColor: { type: 'color', propGroup: 'button' },
     buttonTextColor: { type: 'color', propGroup: 'button' },
     buttonTextSize: { type: 'number', propGroup: 'button' },
@@ -669,11 +706,14 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     buttonBorderColor: { type: 'color', propGroup: 'button' },
     buttonRadius: { type: 'number', propGroup: 'button' },
     buttonPadding: { type: 'string', propGroup: 'button' },
-    buttonAlign: { type: 'choice', options: ['left', 'center', 'right'], propGroup: 'button' },
+    buttonAlign: {
+      type: 'choice',
+      options: ['left', 'center', 'right'],
+      propGroup: 'button',
+    },
     buttonHoverBg: { type: 'color', propGroup: 'button' },
     buttonHoverText: { type: 'color', propGroup: 'button' },
 
-    /* ---------- ERROR ---------- */
     errorMessage: { type: 'string', propGroup: 'error' },
     errorFontFamily: { type: 'string', propGroup: 'error' },
     errorFontSize: { type: 'number', propGroup: 'error' },
@@ -682,7 +722,6 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     errorPadding: { type: 'string', propGroup: 'error' },
     errorMargin: { type: 'string', propGroup: 'error' },
 
-    /* ---------- SUCCESS ---------- */
     successMessage: { type: 'string', propGroup: 'success' },
     successFontFamily: { type: 'string', propGroup: 'success' },
     successFontSize: { type: 'number', propGroup: 'success' },
@@ -691,7 +730,6 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     successPadding: { type: 'string', propGroup: 'success' },
     successMargin: { type: 'string', propGroup: 'success' },
 
-    /* ---------- CHECKBOX TEXT ---------- */
     checkboxTextFontFamily: { type: 'string', propGroup: 'checkboxText' },
     checkboxTextFontSize: { type: 'number', propGroup: 'checkboxText' },
     checkboxTextFontWeight: { type: 'number', propGroup: 'checkboxText' },
@@ -699,7 +737,6 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     checkboxTextLineHeight: { type: 'string', propGroup: 'checkboxText' },
     checkboxTextMargin: { type: 'string', propGroup: 'checkboxText' },
 
-    /* ---------- CHECKBOX STYLE ---------- */
     checkboxSize: { type: 'number', propGroup: 'checkbox' },
     checkboxRadius: { type: 'number', propGroup: 'checkbox' },
     checkboxBg: { type: 'color', propGroup: 'checkbox' },
@@ -710,6 +747,5 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     checkboxCheckColor: { type: 'color', propGroup: 'checkbox' },
   },
 });
-
 
 export default LeadFormWithCaptcha;
