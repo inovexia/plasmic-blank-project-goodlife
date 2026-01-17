@@ -134,7 +134,6 @@ function LeadFormWithCaptcha({
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [fallbackCode, setFallbackCode] = useState('');
   const [fallbackInput, setFallbackInput] = useState('');
-  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const recaptchaRef = useRef(null);
 
   useEffect(() => {
@@ -170,31 +169,31 @@ function LeadFormWithCaptcha({
 
   /* ---------- CAPTCHA HANDLERS ---------- */
   async function onRecaptchaVerify(token) {
-    if (!token) {
-      setCaptchaVerified(false);
-      return;
-    }
+    if (!token) return;
 
-    setRecaptchaToken(token);
-
+    // Verify token via server
     try {
-      const res = await fetch('/api/verify-recaptcha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, version: recaptchaVersion }),
-      });
-
+      const res = await fetch(
+        `${API_BASE_URL}/form/${formHandle}/verify-captcha`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, version: recaptchaVersion }),
+        }
+      );
       const data = await res.json();
 
-      if (data?.success) {
+      if (data.success) {
         setCaptchaVerified(true);
       } else {
         setCaptchaVerified(false);
-        alert('Captcha verification failed');
+        alert('Captcha verification failed. Try again.');
+        recaptchaRef.current?.reset();
       }
-    } catch {
+    } catch (err) {
+      console.error('Captcha verify error', err);
       setCaptchaVerified(false);
-      alert('Captcha verification error');
+      recaptchaRef.current?.reset();
     }
   }
 
@@ -212,7 +211,6 @@ function LeadFormWithCaptcha({
   /* ---------- VALIDATION ---------- */
   function validate() {
     const errs = {};
-
     Object.values(form.fields || {}).forEach((field) => {
       const value = values[field.handle];
       const rules = field.validate || [];
@@ -221,14 +219,8 @@ function LeadFormWithCaptcha({
 
       if (rules.includes('required')) {
         if (field.type === 'checkboxes') {
-          if (value !== 1) {
-            errs[field.handle] = 'Required';
-            return;
-          }
-        } else if (!fieldValue) {
-          errs[field.handle] = 'Required';
-          return;
-        }
+          if (value !== 1) errs[field.handle] = 'Required';
+        } else if (!fieldValue) errs[field.handle] = 'Required';
       }
 
       if (
@@ -237,32 +229,21 @@ function LeadFormWithCaptcha({
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fieldValue)
       ) {
         errs[field.handle] = 'Invalid email address';
-        return;
       }
 
       if (handle.includes('phone') || handle.includes('mobile')) {
-        if (!/^\d+$/.test(fieldValue)) {
+        if (!/^\d+$/.test(fieldValue))
           errs[field.handle] = 'Phone number must contain only digits';
-          return;
-        }
-
-        if (fieldValue.length < 10 || fieldValue.length > 12) {
+        if (fieldValue.length < 10 || fieldValue.length > 12)
           errs[field.handle] = 'Phone number must be between 10 and 12 digits';
-          return;
-        }
       }
 
       if (handle.includes('postal') || handle.includes('zip')) {
-        if (!/^[a-zA-Z0-9]+$/.test(fieldValue)) {
+        if (!/^[a-zA-Z0-9]+$/.test(fieldValue))
           errs[field.handle] =
             'Postal code must contain only letters and numbers';
-          return;
-        }
-
-        if (fieldValue.length !== 6) {
+        if (fieldValue.length !== 6)
           errs[field.handle] = 'Postal code must be exactly 6 characters';
-          return;
-        }
       }
     });
 
@@ -290,16 +271,10 @@ function LeadFormWithCaptcha({
         formPayload.append(key, value)
       );
 
-      // OPTIONAL: Send token to your form API if needed
-      if (recaptchaToken) {
-        formPayload.append('recaptcha_token', recaptchaToken);
-      }
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 12000);
 
       let res;
-
       try {
         res = await fetch(`${API_BASE_URL}/form/${formHandle}/submit`, {
           method: 'POST',
@@ -308,53 +283,39 @@ function LeadFormWithCaptcha({
           signal: controller.signal,
         });
       } catch (err) {
-        if (err.name === 'AbortError') {
-          res = { ok: true };
-        } else {
-          throw err;
-        }
+        if (err.name === 'AbortError') res = { ok: true };
+        else throw err;
       } finally {
         clearTimeout(timeoutId);
       }
 
       let data = null;
-
       try {
         const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          data = await res.json();
-        }
+        if (contentType.includes('application/json')) data = await res.json();
       } catch {
         data = null;
       }
 
       if (!res.ok || data?.success === false) {
         const apiErrors = {};
-
         if (data?.message && typeof data.message === 'object') {
           Object.entries(data.message).forEach(([key, msgs]) => {
             apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
           });
         }
-
         if (data?.errors && typeof data.errors === 'object') {
           Object.entries(data.errors).forEach(([key, msgs]) => {
             apiErrors[key] = Array.isArray(msgs) ? msgs[0] : msgs;
           });
         }
-
         if (Object.keys(apiErrors).length > 0) {
           setErrors(apiErrors);
           setFormError('');
           return;
         }
-
-        if (typeof data?.message === 'string') {
-          setFormError(data.message);
-          return;
-        }
-
-        setFormError(errorMessage);
+        if (typeof data?.message === 'string') setFormError(data.message);
+        else setFormError(errorMessage);
         return;
       }
 
@@ -363,35 +324,18 @@ function LeadFormWithCaptcha({
           const emailField = Object.values(form.fields || {}).find((field) =>
             field.validate?.includes('email')
           );
-
-          if (emailField) {
-            const emailValue = values[emailField.handle];
-            if (emailValue) {
-              localStorage.setItem('lead_email', emailValue);
-            }
-          }
-
-          if (formHandle) {
-            localStorage.setItem('form_handle', formHandle);
-          }
+          if (emailField)
+            localStorage.setItem('lead_email', values[emailField.handle]);
+          if (formHandle) localStorage.setItem('form_handle', formHandle);
         }
       } catch {}
 
       setSuccess(successMessage);
       setValues({});
       setErrors({});
-      setCaptchaVerified(false);
-      setRecaptchaToken(null);
 
-      if (recaptchaRef.current) {
-        try {
-          recaptchaRef.current.reset();
-        } catch {}
-      }
-
-      if (redirectUrl) {
+      if (redirectUrl)
         setTimeout(() => (window.location.href = redirectUrl), 500);
-      }
     } catch (err) {
       setFormError(err?.message || 'Form submission failed');
     } finally {
@@ -399,11 +343,7 @@ function LeadFormWithCaptcha({
     }
   }
 
-  const alignMap = {
-    left: 'flex-start',
-    center: 'center',
-    right: 'flex-end',
-  };
+  const alignMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
 
   if (!mounted) return null;
   if (!formHandle) return <MissingFormHandle />;
@@ -412,6 +352,7 @@ function LeadFormWithCaptcha({
   return (
     <section style={{ width: '100%', padding, color: textColor }}>
       <form onSubmit={onSubmit}>
+        {/* --- FORM FIELDS --- */}
         <div
           style={{
             display: 'grid',
@@ -422,7 +363,6 @@ function LeadFormWithCaptcha({
           {Object.values(form.fields).map((field) => {
             const colSpan = field.width === 50 ? 'span 6' : 'span 12';
             const isCheckbox = field.type === 'checkboxes';
-
             return (
               <div key={field.handle} style={{ gridColumn: colSpan }}>
                 {!isCheckbox ? (
@@ -443,17 +383,13 @@ function LeadFormWithCaptcha({
                         <span style={{ color: 'red' }}> *</span>
                       )}
                     </label>
-
                     <input
                       type={
                         field.validate?.includes('email') ? 'email' : 'text'
                       }
                       value={values[field.handle] || ''}
                       onChange={(e) =>
-                        setValues({
-                          ...values,
-                          [field.handle]: e.target.value,
-                        })
+                        setValues({ ...values, [field.handle]: e.target.value })
                       }
                       style={{
                         width: '100%',
@@ -518,7 +454,6 @@ function LeadFormWithCaptcha({
                         </svg>
                       )}
                     </span>
-
                     <input
                       type='checkbox'
                       checked={values[field.handle] === 1}
@@ -534,7 +469,6 @@ function LeadFormWithCaptcha({
                         pointerEvents: 'none',
                       }}
                     />
-
                     <span
                       style={{
                         fontFamily: checkboxTextFontFamily,
@@ -549,7 +483,6 @@ function LeadFormWithCaptcha({
                     </span>
                   </label>
                 )}
-
                 {errors[field.handle] && (
                   <div
                     style={{
@@ -567,7 +500,7 @@ function LeadFormWithCaptcha({
           })}
         </div>
 
-        {/* ---------- CAPTCHA UI ---------- */}
+        {/* --- CAPTCHA --- */}
         {enableRecaptcha && (
           <div
             style={{
@@ -577,20 +510,12 @@ function LeadFormWithCaptcha({
             }}
           >
             {recaptchaSiteKey ? (
-              recaptchaVersion === 'v2' ? (
-                <ReCAPTCHA
-                  ref={recaptchaRef}
-                  sitekey={recaptchaSiteKey}
-                  onChange={onRecaptchaVerify}
-                />
-              ) : (
-                <ReCAPTCHA
-                  ref={recaptchaRef}
-                  sitekey={recaptchaSiteKey}
-                  size='invisible'
-                  onChange={onRecaptchaVerify}
-                />
-              )
+              <ReCAPTCHA
+                ref={recaptchaRef}
+                sitekey={recaptchaSiteKey}
+                size={recaptchaVersion === 'v2' ? 'normal' : 'invisible'}
+                onChange={onRecaptchaVerify}
+              />
             ) : (
               <div>
                 <div
@@ -624,6 +549,7 @@ function LeadFormWithCaptcha({
           </div>
         )}
 
+        {/* --- SUBMIT BUTTON --- */}
         <div
           style={{
             display: 'flex',
@@ -651,6 +577,7 @@ function LeadFormWithCaptcha({
           </button>
         </div>
 
+        {/* --- ERROR & SUCCESS --- */}
         {formError && (
           <div
             style={{
@@ -665,7 +592,6 @@ function LeadFormWithCaptcha({
             {formError}
           </div>
         )}
-
         {success && (
           <div
             style={{
@@ -681,31 +607,11 @@ function LeadFormWithCaptcha({
           </div>
         )}
       </form>
-
-      <style jsx>{`
-        button:hover {
-          background: ${buttonHoverBg};
-          color: ${buttonHoverText};
-        }
-
-        input:focus,
-        input:focus-visible,
-        button:focus {
-          outline: none;
-          box-shadow: none;
-        }
-
-        @media (max-width: 768px) {
-          div[style*='grid-column: span 6'] {
-            grid-column: span 12 !important;
-          }
-        }
-      `}</style>
     </section>
   );
 }
 
-/* ---------- PLASMIC REGISTER (UNCHANGED) ---------- */
+/* ---------- PLASMIC REGISTER (ALL PROPS) ---------- */
 PLASMIC.registerComponent(LeadFormWithCaptcha, {
   name: 'Lead Form With Google Captcha',
   propGroups: {
@@ -720,34 +626,20 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     success: { name: 'Success Message' },
   },
   props: {
+    /* ---------- FORM ---------- */
     formHandle: { type: 'string', propGroup: 'form' },
     submitText: { type: 'string', propGroup: 'form' },
     padding: { type: 'string', propGroup: 'form' },
     fieldGap: { type: 'number', propGroup: 'form' },
     redirectUrl: { type: 'string', propGroup: 'form' },
 
-    enableRecaptcha: {
-      type: 'boolean',
-      defaultValue: true,
-      propGroup: 'recaptcha',
-    },
-    recaptchaVersion: {
-      type: 'choice',
-      options: ['v2', 'v3'],
-      defaultValue: 'v2',
-      propGroup: 'recaptcha',
-    },
-    recaptchaSiteKey: {
-      type: 'string',
-      propGroup: 'recaptcha',
-    },
-    recaptchaAlign: {
-      type: 'choice',
-      options: ['left', 'center', 'right'],
-      defaultValue: 'left',
-      propGroup: 'recaptcha',
-    },
+    /* ---------- RECAPTCHA ---------- */
+    enableRecaptcha: { type: 'boolean', defaultValue: true, propGroup: 'recaptcha' },
+    recaptchaVersion: { type: 'choice', options: ['v2', 'v3'], defaultValue: 'v2', propGroup: 'recaptcha' },
+    recaptchaSiteKey: { type: 'string', propGroup: 'recaptcha' },
+    recaptchaAlign: { type: 'choice', options: ['left', 'center', 'right'], defaultValue: 'left', propGroup: 'recaptcha' },
 
+    /* ---------- LABEL ---------- */
     labelFontFamily: { type: 'string', propGroup: 'label' },
     labelFontSize: { type: 'number', propGroup: 'label' },
     labelFontWeight: { type: 'number', propGroup: 'label' },
@@ -755,6 +647,7 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     labelPadding: { type: 'string', propGroup: 'label' },
     labelMargin: { type: 'string', propGroup: 'label' },
 
+    /* ---------- INPUT ---------- */
     inputFontFamily: { type: 'string', propGroup: 'input' },
     inputFontSize: { type: 'number', propGroup: 'input' },
     inputFontWeight: { type: 'number', propGroup: 'input' },
@@ -767,6 +660,7 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     inputBorderSize: { type: 'number', propGroup: 'input' },
     inputBorderColor: { type: 'color', propGroup: 'input' },
 
+    /* ---------- BUTTON ---------- */
     buttonBgColor: { type: 'color', propGroup: 'button' },
     buttonTextColor: { type: 'color', propGroup: 'button' },
     buttonTextSize: { type: 'number', propGroup: 'button' },
@@ -774,14 +668,11 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     buttonBorderColor: { type: 'color', propGroup: 'button' },
     buttonRadius: { type: 'number', propGroup: 'button' },
     buttonPadding: { type: 'string', propGroup: 'button' },
-    buttonAlign: {
-      type: 'choice',
-      options: ['left', 'center', 'right'],
-      propGroup: 'button',
-    },
+    buttonAlign: { type: 'choice', options: ['left', 'center', 'right'], propGroup: 'button' },
     buttonHoverBg: { type: 'color', propGroup: 'button' },
     buttonHoverText: { type: 'color', propGroup: 'button' },
 
+    /* ---------- ERROR ---------- */
     errorMessage: { type: 'string', propGroup: 'error' },
     errorFontFamily: { type: 'string', propGroup: 'error' },
     errorFontSize: { type: 'number', propGroup: 'error' },
@@ -790,6 +681,7 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     errorPadding: { type: 'string', propGroup: 'error' },
     errorMargin: { type: 'string', propGroup: 'error' },
 
+    /* ---------- SUCCESS ---------- */
     successMessage: { type: 'string', propGroup: 'success' },
     successFontFamily: { type: 'string', propGroup: 'success' },
     successFontSize: { type: 'number', propGroup: 'success' },
@@ -797,7 +689,26 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     successTextColor: { type: 'color', propGroup: 'success' },
     successPadding: { type: 'string', propGroup: 'success' },
     successMargin: { type: 'string', propGroup: 'success' },
+
+    /* ---------- CHECKBOX TEXT ---------- */
+    checkboxTextFontFamily: { type: 'string', propGroup: 'checkboxText' },
+    checkboxTextFontSize: { type: 'number', propGroup: 'checkboxText' },
+    checkboxTextFontWeight: { type: 'number', propGroup: 'checkboxText' },
+    checkboxTextColor: { type: 'color', propGroup: 'checkboxText' },
+    checkboxTextLineHeight: { type: 'string', propGroup: 'checkboxText' },
+    checkboxTextMargin: { type: 'string', propGroup: 'checkboxText' },
+
+    /* ---------- CHECKBOX STYLE ---------- */
+    checkboxSize: { type: 'number', propGroup: 'checkbox' },
+    checkboxRadius: { type: 'number', propGroup: 'checkbox' },
+    checkboxBg: { type: 'color', propGroup: 'checkbox' },
+    checkboxBorderColor: { type: 'color', propGroup: 'checkbox' },
+    checkboxBorderWidth: { type: 'number', propGroup: 'checkbox' },
+    checkboxCheckedBg: { type: 'color', propGroup: 'checkbox' },
+    checkboxCheckedBorderColor: { type: 'color', propGroup: 'checkbox' },
+    checkboxCheckColor: { type: 'color', propGroup: 'checkbox' },
   },
 });
+
 
 export default LeadFormWithCaptcha;
