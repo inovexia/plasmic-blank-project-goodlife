@@ -295,7 +295,6 @@ function LeadGenerationForm({
       }
 
       /* ---------- SUCCESS ---------- */
-      /* ---------- SUCCESS ---------- */
       try {
         if (typeof window !== 'undefined' && form?.fields) {
           const fields = Object.values(form.fields);

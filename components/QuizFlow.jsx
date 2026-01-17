@@ -211,6 +211,7 @@ function QuizFlow({
               style={{
                 display: 'flex',
                 gap: 10,
+                alignItems: 'center',
                 marginBottom: 16,
                 color: optionColor,
                 cursor: locked ? 'default' : 'pointer',

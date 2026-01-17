@@ -6,3 +6,4 @@ import './PrizeScratchCard';
 import './QuizFlow';
 import './LeadGenerationForm';
 import './LeadFormWithCaptcha';
+import './GoodLifeForm';
