@@ -168,19 +168,17 @@ function LeadFormWithCaptcha({
   }, [mounted, formHandle, errorMessage]);
 
   /* ---------- CAPTCHA HANDLERS ---------- */
+  /* ---------- CAPTCHA HANDLER ---------- */
   async function onRecaptchaVerify(token) {
     if (!token) return;
 
-    // Verify token via server
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/form/${formHandle}/verify-captcha`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, version: recaptchaVersion }),
-        }
-      );
+      const res = await fetch('/api/verify-captcha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+
       const data = await res.json();
 
       if (data.success) {
