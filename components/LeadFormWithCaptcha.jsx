@@ -167,7 +167,6 @@ function LeadFormWithCaptcha({
       .catch(() => setFormError(errorMessage));
   }, [mounted, formHandle, errorMessage]);
 
-  /* ---------- CAPTCHA HANDLERS ---------- */
   /* ---------- CAPTCHA HANDLER ---------- */
   async function onRecaptchaVerify(token) {
     if (!token) return;
@@ -176,8 +175,12 @@ function LeadFormWithCaptcha({
       const res = await fetch('/api/verify-captcha', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({
+          token,
+          version: recaptchaVersion,
+        }),
       });
+
 
       const data = await res.json();
 
