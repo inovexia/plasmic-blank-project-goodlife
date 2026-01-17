@@ -295,27 +295,53 @@ function LeadGenerationForm({
       }
 
       /* ---------- SUCCESS ---------- */
+      /* ---------- SUCCESS ---------- */
       try {
-        if (typeof window !== 'undefined') {
-          // Save email
-          const emailField = Object.values(form.fields || {}).find((field) =>
-            field.validate?.includes('email')
-          );
+        if (typeof window !== 'undefined' && form?.fields) {
+          const fields = Object.values(form.fields);
+
+          const emailField = fields.find((field) => {
+            const handle = field.handle?.toLowerCase() || '';
+            const validate = field.validate;
+
+            // Case 1: Array validation
+            if (Array.isArray(validate) && validate.includes('email')) {
+              return true;
+            }
+
+            // Case 2: Object validation
+            if (typeof validate === 'object' && validate?.email) {
+              return true;
+            }
+
+            // Case 3: Field type
+            if (field.type === 'email') {
+              return true;
+            }
+
+            // Case 4: Handle name fallback
+            if (handle.includes('email') || handle.includes('mail')) {
+              return true;
+            }
+
+            return false;
+          });
 
           if (emailField) {
             const emailValue = values[emailField.handle];
-            if (emailValue) {
-              localStorage.setItem('lead_email', emailValue);
+
+            if (emailValue && typeof emailValue === 'string') {
+              localStorage.setItem('lead_email', emailValue.trim());
+              console.log('Saved lead email:', emailValue);
             }
           }
 
-          // Save form handle
           if (formHandle) {
             localStorage.setItem('form_handle', formHandle);
           }
         }
-      } catch {
-        // Silent fail – never block success
+      } catch (err) {
+        console.warn('LocalStorage save failed:', err);
       }
 
       setSuccess(successMessage);
