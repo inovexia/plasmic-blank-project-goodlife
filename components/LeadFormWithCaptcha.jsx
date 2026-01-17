@@ -48,7 +48,7 @@ function LeadFormWithCaptcha({
   enableRecaptcha = true,
   recaptchaVersion = 'v2',
   recaptchaSiteKey = '',
-  recaptchaAlign = 'left', // NEW
+  recaptchaAlign = 'left',
 
   /* ---------- LABEL ---------- */
   labelFontFamily = 'inherit',
@@ -134,6 +134,7 @@ function LeadFormWithCaptcha({
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [fallbackCode, setFallbackCode] = useState('');
   const [fallbackInput, setFallbackInput] = useState('');
+  const [recaptchaToken, setRecaptchaToken] = useState(null);
   const recaptchaRef = useRef(null);
 
   useEffect(() => {
@@ -168,8 +169,33 @@ function LeadFormWithCaptcha({
   }, [mounted, formHandle, errorMessage]);
 
   /* ---------- CAPTCHA HANDLERS ---------- */
-  function onRecaptchaVerify() {
-    setCaptchaVerified(true);
+  async function onRecaptchaVerify(token) {
+    if (!token) {
+      setCaptchaVerified(false);
+      return;
+    }
+
+    setRecaptchaToken(token);
+
+    try {
+      const res = await fetch('/api/verify-recaptcha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, version: recaptchaVersion }),
+      });
+
+      const data = await res.json();
+
+      if (data?.success) {
+        setCaptchaVerified(true);
+      } else {
+        setCaptchaVerified(false);
+        alert('Captcha verification failed');
+      }
+    } catch {
+      setCaptchaVerified(false);
+      alert('Captcha verification error');
+    }
   }
 
   function verifyFallbackCaptcha() {
@@ -264,6 +290,11 @@ function LeadFormWithCaptcha({
         formPayload.append(key, value)
       );
 
+      // OPTIONAL: Send token to your form API if needed
+      if (recaptchaToken) {
+        formPayload.append('recaptcha_token', recaptchaToken);
+      }
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 12000);
 
@@ -349,6 +380,14 @@ function LeadFormWithCaptcha({
       setSuccess(successMessage);
       setValues({});
       setErrors({});
+      setCaptchaVerified(false);
+      setRecaptchaToken(null);
+
+      if (recaptchaRef.current) {
+        try {
+          recaptchaRef.current.reset();
+        } catch {}
+      }
 
       if (redirectUrl) {
         setTimeout(() => (window.location.href = redirectUrl), 500);
@@ -534,7 +573,7 @@ function LeadFormWithCaptcha({
             style={{
               marginTop: 24,
               display: 'flex',
-              justifyContent: alignMap[recaptchaAlign], // NEW
+              justifyContent: alignMap[recaptchaAlign],
             }}
           >
             {recaptchaSiteKey ? (
@@ -666,7 +705,7 @@ function LeadFormWithCaptcha({
   );
 }
 
-/* ---------- PLASMIC REGISTER (ALL PROPS — VERIFIED) ---------- */
+/* ---------- PLASMIC REGISTER (UNCHANGED) ---------- */
 PLASMIC.registerComponent(LeadFormWithCaptcha, {
   name: 'Lead Form With Google Captcha',
   propGroups: {

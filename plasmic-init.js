@@ -5,6 +5,8 @@ export const PLASMIC = initPlasmicLoader({
     {
       id: process.env.NEXT_PUBLIC_PLM_PROJECT_ID,
       token: process.env.NEXT_PUBLIC_PLM_TOKEN,
+      sitekeyv2: process.env.NEXT_PUBLIC_GCAPTCHA_SITEKEY_V2,
+      sitekeyv3: process.env.NEXT_PUBLIC_GCAPTCHA_SITEKEY_V3,
     },
   ],
 });
