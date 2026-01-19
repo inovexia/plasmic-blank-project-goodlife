@@ -49,7 +49,6 @@ function LeadFormWithCaptcha({
   recaptchaVersion = 'v2',
   recaptchaSiteKey = '',
   recaptchaAlign = 'left',
-  enableFallbackCaptcha = true,
 
   /* ---------- LABEL ---------- */
   labelFontFamily = 'inherit',
@@ -137,12 +136,6 @@ function LeadFormWithCaptcha({
   const [fallbackCode, setFallbackCode] = useState('');
   const [fallbackInput, setFallbackInput] = useState('');
   const recaptchaRef = useRef(null);
-
-  const showGoogleCaptcha = enableRecaptcha && Boolean(recaptchaSiteKey);
-
-  const showFallbackCaptcha =
-    enableRecaptcha && enableFallbackCaptcha && !recaptchaSiteKey;
-
 
   useEffect(() => {
     setMounted(true);
@@ -286,13 +279,7 @@ function LeadFormWithCaptcha({
     }
 
     // ---- V2 FLOW ----
-    if (showGoogleCaptcha && recaptchaVersion === 'v2' && !captchaVerified) {
-      setFormError('Please verify captcha first');
-      return;
-    }
-
-    // ---- FALLBACK FLOW ----
-    if (showFallbackCaptcha && !captchaVerified) {
+    if (enableRecaptcha && recaptchaVersion === 'v2' && !captchaVerified) {
       setFormError('Please verify captcha first');
       return;
     }
@@ -303,7 +290,7 @@ function LeadFormWithCaptcha({
     try {
       const formPayload = new FormData();
       Object.entries(values).forEach(([key, value]) =>
-        formPayload.append(key, value),
+        formPayload.append(key, value)
       );
 
       const controller = new AbortController();
@@ -357,7 +344,7 @@ function LeadFormWithCaptcha({
       try {
         if (typeof window !== 'undefined') {
           const emailField = Object.values(form.fields || {}).find((field) =>
-            field.validate?.includes('email'),
+            field.validate?.includes('email')
           );
           if (emailField)
             localStorage.setItem('lead_email', values[emailField.handle]);
@@ -545,16 +532,14 @@ function LeadFormWithCaptcha({
               justifyContent: alignMap[recaptchaAlign],
             }}
           >
-            {showGoogleCaptcha && (
+            {recaptchaSiteKey ? (
               <ReCAPTCHA
                 ref={recaptchaRef}
                 sitekey={recaptchaSiteKey}
                 size={recaptchaVersion === 'v2' ? 'normal' : 'invisible'}
                 onChange={onRecaptchaVerify}
               />
-            )}
-
-            {showFallbackCaptcha && (
+            ) : (
               <div>
                 <div
                   style={{
@@ -599,10 +584,7 @@ function LeadFormWithCaptcha({
             type='submit'
             disabled={
               loading ||
-              (showGoogleCaptcha &&
-                recaptchaVersion === 'v2' &&
-                !captchaVerified) ||
-              (showFallbackCaptcha && !captchaVerified)
+              (enableRecaptcha && recaptchaVersion === 'v2' && !captchaVerified)
             }
             style={{
               background: buttonBgColor,
@@ -680,11 +662,6 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     redirectUrl: { type: 'string', propGroup: 'form' },
 
     enableRecaptcha: {
-      type: 'boolean',
-      defaultValue: true,
-      propGroup: 'recaptcha',
-    },
-    enableFallbackCaptcha: {
       type: 'boolean',
       defaultValue: true,
       propGroup: 'recaptcha',
