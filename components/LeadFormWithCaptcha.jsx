@@ -358,8 +358,10 @@ function LeadFormWithCaptcha({
       setErrors({});
       setCaptchaVerified(false);
 
-      if (redirectUrl)
-        setTimeout(() => (window.location.href = redirectUrl), 500);
+      // Redirect immediately (React state updates do not block this)
+      if (redirectUrl && typeof window !== 'undefined') {
+        window.location.assign(redirectUrl);
+      }
     } catch (err) {
       setFormError(err?.message || 'Form submission failed');
     } finally {
