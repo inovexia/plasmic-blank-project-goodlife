@@ -187,7 +187,6 @@ function LeadFormWithCaptcha({
 
       if (data.success) {
         setCaptchaVerified(true);
-
         // Continue submit flow for v3
         if (recaptchaVersion === 'v3' && pendingSubmit) {
           setPendingSubmit(false);
