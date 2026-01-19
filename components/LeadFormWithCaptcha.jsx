@@ -547,52 +547,87 @@ function LeadFormWithCaptcha({
 
             {/* --- FALLBACK CAPTCHA --- */}
             {!enableRecaptcha && enableFallbackCaptcha && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {/* Captcha Code */}
-                <div
-                  style={{
-                    fontSize: 24,
-                    fontWeight: 'bold',
-                    letterSpacing: 4,
-                    background: '#f4f4f4',
-                    color: '#000',
-                    padding: '10px 20px',
-                    userSelect: 'none',
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  {fallbackCode}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  marginTop: 16,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Captcha Code */}
+                  <div
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 'bold',
+                      letterSpacing: 4,
+                      background: '#f4f4f4',
+                      color: '#000',
+                      padding: '10px 20px',
+                      userSelect: 'none',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    {fallbackCode}
+                  </div>
+
+                  {/* Captcha Input */}
+                  <input
+                    placeholder='Enter captcha'
+                    value={fallbackInput}
+                    onChange={(e) => setFallbackInput(e.target.value)}
+                    style={{ padding: 6, flex: 1 }}
+                  />
+
+                  {/* Refresh Icon */}
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setFallbackCode(generateCaptcha());
+                      setFallbackInput('');
+                      setCaptchaVerified(false);
+                      setFormError('');
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: 18,
+                    }}
+                    title='Refresh captcha'
+                  >
+                    🔄
+                  </button>
+
+                  {/* Verify Button */}
+                  <button
+                    type='button'
+                    onClick={verifyFallbackCaptcha}
+                    style={{
+                      padding: '6px 12px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Verify
+                  </button>
                 </div>
 
-                {/* Captcha Input */}
-                <input
-                  placeholder='Enter captcha'
-                  value={fallbackInput}
-                  onChange={(e) => setFallbackInput(e.target.value)}
-                  style={{ padding: 6 }}
-                />
-
-                {/* Verify Button */}
-                <button
-                  type='button'
-                  onClick={verifyFallbackCaptcha}
-                  style={{ padding: '6px 12px', cursor: 'pointer' }}
-                >
-                  Verify
-                </button>
-
-                {/* Refresh Button */}
-                <button
-                  type='button'
-                  onClick={() => {
-                    setFallbackCode(generateCaptcha());
-                    setFallbackInput('');
-                    setCaptchaVerified(false);
-                  }}
-                  style={{ padding: '6px 12px', cursor: 'pointer' }}
-                >
-                  Refresh
-                </button>
+                {/* Error message below */}
+                {formError && (
+                  <div
+                    style={{
+                      fontFamily: errorFontFamily,
+                      fontSize: errorFontSize,
+                      fontWeight: errorFontWeight,
+                      color: errorTextColor,
+                      padding: errorPadding,
+                      margin: errorMargin,
+                    }}
+                  >
+                    {formError}
+                  </div>
+                )}
               </div>
             )}
           </div>
