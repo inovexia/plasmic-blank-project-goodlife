@@ -35,8 +35,6 @@ function MissingFormHandle() {
   );
 }
 
-
-
 function LeadFormWithCaptcha({
   /* ---------- FORM ---------- */
   formHandle,
@@ -51,7 +49,6 @@ function LeadFormWithCaptcha({
   recaptchaVersion = 'v2',
   recaptchaSiteKey = '',
   recaptchaAlign = 'left',
-  enableFallbackCaptcha = true,
 
   /* ---------- LABEL ---------- */
   labelFontFamily = 'inherit',
@@ -136,34 +133,14 @@ function LeadFormWithCaptcha({
   /* ---------- CAPTCHA STATE ---------- */
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
-  const [googleTimeoutHit, setGoogleTimeoutHit] = useState(false);
   const [fallbackCode, setFallbackCode] = useState('');
   const [fallbackInput, setFallbackInput] = useState('');
   const recaptchaRef = useRef(null);
-
-  const hasSiteKey = Boolean(recaptchaSiteKey?.trim());
-
-  const showGoogleCaptcha = enableRecaptcha && hasSiteKey;
-  const showFallbackCaptcha =
-    enableFallbackCaptcha &&
-    (!enableRecaptcha || !hasSiteKey || googleCaptchaFailed);
 
   useEffect(() => {
     setMounted(true);
     setFallbackCode(generateCaptcha());
   }, []);
-
-  useEffect(() => {
-    if (!enableRecaptcha || !hasSiteKey) return;
-
-    const timer = setTimeout(() => {
-      console.warn('reCAPTCHA load timeout');
-    }, 4000);
-
-
-    return () => clearTimeout(timer);
-  }, [enableRecaptcha, hasSiteKey]);
-
 
   /* ---------- LOAD FORM ---------- */
   useEffect(() => {
@@ -191,13 +168,6 @@ function LeadFormWithCaptcha({
       .catch(() => setFormError(errorMessage));
   }, [mounted, formHandle, errorMessage]);
 
-  // Refresh fallback captcha
-  function refreshFallbackCaptcha() {
-    setFallbackCode(generateCaptcha());
-    setFallbackInput('');
-    setCaptchaVerified(false);
-  }
-
   /* ---------- CAPTCHA HANDLER ---------- */
   async function onRecaptchaVerify(token) {
     if (!token) return;
@@ -223,22 +193,11 @@ function LeadFormWithCaptcha({
           document.querySelector('form')?.requestSubmit();
         }
       } else {
-        console.warn('Captcha rejected by server, switching to fallback', data);
-
         setCaptchaVerified(false);
         setPendingSubmit(false);
-
-        // Optional UX
-        setFormError(
-          enableFallbackCaptcha
-            ? 'Google captcha failed. Please complete the fallback captcha.'
-            : 'Captcha verification failed. Please try again.',
-        );
-
-        // Reset Google widget
-        recaptchaRef.current?.reset?.();
+        alert('Captcha verification failed. Try again.');
+        recaptchaRef.current?.reset();
       }
-
     } catch (err) {
       console.error('Captcha verify error', err);
       setCaptchaVerified(false);
@@ -320,12 +279,7 @@ function LeadFormWithCaptcha({
     }
 
     // ---- V2 FLOW ----
-    if (showGoogleCaptcha && recaptchaVersion === 'v2' && !captchaVerified) {
-      setFormError('Please verify captcha first');
-      return;
-    }
-
-    if ((showGoogleCaptcha || showFallbackCaptcha) && !captchaVerified) {
+    if (enableRecaptcha && recaptchaVersion === 'v2' && !captchaVerified) {
       setFormError('Please verify captcha first');
       return;
     }
@@ -336,7 +290,7 @@ function LeadFormWithCaptcha({
     try {
       const formPayload = new FormData();
       Object.entries(values).forEach(([key, value]) =>
-        formPayload.append(key, value),
+        formPayload.append(key, value)
       );
 
       const controller = new AbortController();
@@ -390,7 +344,7 @@ function LeadFormWithCaptcha({
       try {
         if (typeof window !== 'undefined') {
           const emailField = Object.values(form.fields || {}).find((field) =>
-            field.validate?.includes('email'),
+            field.validate?.includes('email')
           );
           if (emailField)
             localStorage.setItem('lead_email', values[emailField.handle]);
@@ -570,77 +524,60 @@ function LeadFormWithCaptcha({
         </div>
 
         {/* --- CAPTCHA --- */}
-        {enableRecaptcha && (
+        {(enableRecaptcha || enableFallbackCaptcha) && (
           <div
             style={{
               marginTop: 24,
               display: 'flex',
               justifyContent: alignMap[recaptchaAlign],
+              alignItems: 'center',
+              gap: 10,
             }}
           >
-            {showGoogleCaptcha && (
+            {/* --- GOOGLE RECAPTCHA --- */}
+            {enableRecaptcha && recaptchaSiteKey ? (
               <ReCAPTCHA
                 ref={recaptchaRef}
                 sitekey={recaptchaSiteKey}
                 size={recaptchaVersion === 'v2' ? 'normal' : 'invisible'}
                 onChange={onRecaptchaVerify}
-                onErrored={() => {
-                  console.warn('Google reCAPTCHA error, forcing fallback');
-                  setCaptchaVerified(false);
-                  setGoogleCaptchaFailed(true); 
-                }}
-                onExpired={() => {
-                  setCaptchaVerified(false);
-                }}
               />
-            )}
+            ) : null}
 
-            {showFallbackCaptcha && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 'bold',
-                    letterSpacing: 4,
-                    background: '#222',
-                    color: '#fff',
-                    padding: '10px 14px',
-                    display: 'inline-block',
-                    borderRadius: 4,
-                  }}
-                >
-                  {fallbackCode}
+            {/* --- FALLBACK CAPTCHA (only if Google Captcha disabled or fallback explicitly enabled) --- */}
+            {(!enableRecaptcha || enableFallbackCaptcha) &&
+              !recaptchaSiteKey &&
+              enableFallbackCaptcha && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 'bold',
+                      letterSpacing: 4,
+                      background: '#f4f4f4',
+                      color: '#000',
+                      padding: '10px 20px',
+                      userSelect: 'none',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    {fallbackCode}
+                  </div>
+                  <input
+                    placeholder='Enter captcha'
+                    value={fallbackInput}
+                    onChange={(e) => setFallbackInput(e.target.value)}
+                    style={{ padding: 6 }}
+                  />
+                  <button
+                    type='button'
+                    onClick={verifyFallbackCaptcha}
+                    style={{ padding: '6px 12px', cursor: 'pointer' }}
+                  >
+                    Refresh
+                  </button>
                 </div>
-
-                <button
-                  type='button'
-                  onClick={refreshFallbackCaptcha}
-                  title='Refresh captcha'
-                  style={{
-                    padding: '6px 10px',
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                  }}
-                >
-                  🔄
-                </button>
-
-                <input
-                  placeholder='Enter captcha'
-                  value={fallbackInput}
-                  onChange={(e) => setFallbackInput(e.target.value)}
-                  style={{ padding: 6, minWidth: 120 }}
-                />
-
-                <button
-                  type='button'
-                  onClick={verifyFallbackCaptcha}
-                  style={{ padding: '6px 14px' }}
-                >
-                  Verify
-                </button>
-              </div>
-            )}
+              )}
           </div>
         )}
 
@@ -656,10 +593,10 @@ function LeadFormWithCaptcha({
             type='submit'
             disabled={
               loading ||
-              (showGoogleCaptcha &&
+              (enableRecaptcha &&
                 recaptchaVersion === 'v2' &&
                 !captchaVerified) ||
-              (showFallbackCaptcha && !captchaVerified)
+              (enableFallbackCaptcha && !enableRecaptcha && !captchaVerified)
             }
             style={{
               background: buttonBgColor,
@@ -743,7 +680,7 @@ PLASMIC.registerComponent(LeadFormWithCaptcha, {
     },
     enableFallbackCaptcha: {
       type: 'boolean',
-      defaultValue: true,
+      defaultValue: false,
       propGroup: 'recaptcha',
     },
     recaptchaVersion: {
