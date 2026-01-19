@@ -144,15 +144,10 @@ function LeadFormWithCaptcha({
 
   const hasSiteKey = Boolean(recaptchaSiteKey?.trim());
 
-  const showGoogleCaptcha =
-    enableRecaptcha && hasSiteKey && !googleCaptchaFailed && !googleTimeoutHit;
+  const showGoogleCaptcha = enableRecaptcha;
 
-  const showFallbackCaptcha =
-    enableFallbackCaptcha &&
-    (!enableRecaptcha ||
-      !hasSiteKey ||
-      googleCaptchaFailed ||
-      googleTimeoutHit);
+  const showFallbackCaptcha = !enableRecaptcha && enableFallbackCaptcha;
+
 
   // const showGoogleCaptcha = enableRecaptcha && Boolean(recaptchaSiteKey);
   // const showFallbackCaptcha =
@@ -167,9 +162,9 @@ function LeadFormWithCaptcha({
     if (!enableRecaptcha || !hasSiteKey) return;
 
     const timer = setTimeout(() => {
-      console.warn('reCAPTCHA load timeout, switching to fallback');
-      setGoogleTimeoutHit(true);
-    }, 4000); // 4s is enough for script load
+      console.warn('reCAPTCHA load timeout');
+    }, 4000);
+
 
     return () => clearTimeout(timer);
   }, [enableRecaptcha, hasSiteKey]);
@@ -237,9 +232,6 @@ function LeadFormWithCaptcha({
 
         setCaptchaVerified(false);
         setPendingSubmit(false);
-
-        // 🔥 Force fallback mode
-        setGoogleCaptchaFailed(true);
 
         // Optional UX
         setFormError(
@@ -599,7 +591,6 @@ function LeadFormWithCaptcha({
                 onChange={onRecaptchaVerify}
                 onErrored={() => {
                   console.warn('Google reCAPTCHA error, forcing fallback');
-                  setGoogleCaptchaFailed(true);
                   setCaptchaVerified(false);
                 }}
                 onExpired={() => {
