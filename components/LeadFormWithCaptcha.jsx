@@ -140,18 +140,13 @@ function LeadFormWithCaptcha({
   const [fallbackCode, setFallbackCode] = useState('');
   const [fallbackInput, setFallbackInput] = useState('');
   const recaptchaRef = useRef(null);
-  const [googleCaptchaFailed, setGoogleCaptchaFailed] = useState(false);
 
   const hasSiteKey = Boolean(recaptchaSiteKey?.trim());
 
-  const showGoogleCaptcha = enableRecaptcha;
-
-  const showFallbackCaptcha = !enableRecaptcha && enableFallbackCaptcha;
-
-
-  // const showGoogleCaptcha = enableRecaptcha && Boolean(recaptchaSiteKey);
-  // const showFallbackCaptcha =
-  //   enableRecaptcha && enableFallbackCaptcha && !recaptchaSiteKey;
+  const showGoogleCaptcha = enableRecaptcha && hasSiteKey;
+  const showFallbackCaptcha =
+    enableFallbackCaptcha &&
+    (!enableRecaptcha || !hasSiteKey || googleCaptchaFailed);
 
   useEffect(() => {
     setMounted(true);
@@ -592,6 +587,7 @@ function LeadFormWithCaptcha({
                 onErrored={() => {
                   console.warn('Google reCAPTCHA error, forcing fallback');
                   setCaptchaVerified(false);
+                  setGoogleCaptchaFailed(true); 
                 }}
                 onExpired={() => {
                   setCaptchaVerified(false);
