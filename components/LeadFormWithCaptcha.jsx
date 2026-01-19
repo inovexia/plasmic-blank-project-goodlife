@@ -548,6 +548,7 @@ function LeadFormWithCaptcha({
             {/* --- FALLBACK CAPTCHA --- */}
             {!enableRecaptcha && enableFallbackCaptcha && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {/* Captcha Code */}
                 <div
                   style={{
                     fontSize: 24,
@@ -562,15 +563,32 @@ function LeadFormWithCaptcha({
                 >
                   {fallbackCode}
                 </div>
+
+                {/* Captcha Input */}
                 <input
                   placeholder='Enter captcha'
                   value={fallbackInput}
                   onChange={(e) => setFallbackInput(e.target.value)}
                   style={{ padding: 6 }}
                 />
+
+                {/* Verify Button */}
                 <button
                   type='button'
                   onClick={verifyFallbackCaptcha}
+                  style={{ padding: '6px 12px', cursor: 'pointer' }}
+                >
+                  Verify
+                </button>
+
+                {/* Refresh Button */}
+                <button
+                  type='button'
+                  onClick={() => {
+                    setFallbackCode(generateCaptcha());
+                    setFallbackInput('');
+                    setCaptchaVerified(false);
+                  }}
                   style={{ padding: '6px 12px', cursor: 'pointer' }}
                 >
                   Refresh
