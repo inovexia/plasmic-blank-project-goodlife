@@ -191,8 +191,9 @@ function LeadFormWithCaptcha({
         // Continue submit flow for v3
         if (recaptchaVersion === 'v3' && pendingSubmit) {
           setPendingSubmit(false);
-          document.querySelector('form')?.requestSubmit();
+          onSubmit(e);
         }
+
       } else {
         setCaptchaVerified(false);
         setPendingSubmit(false);
