@@ -545,40 +545,38 @@ function LeadFormWithCaptcha({
               />
             ) : null}
 
-            {/* --- FALLBACK CAPTCHA (only if Google Captcha disabled or fallback explicitly enabled) --- */}
-            {(!enableRecaptcha || enableFallbackCaptcha) &&
-              !recaptchaSiteKey &&
-              enableFallbackCaptcha && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 'bold',
-                      letterSpacing: 4,
-                      background: '#f4f4f4',
-                      color: '#000',
-                      padding: '10px 20px',
-                      userSelect: 'none',
-                      fontFamily: 'monospace',
-                    }}
-                  >
-                    {fallbackCode}
-                  </div>
-                  <input
-                    placeholder='Enter captcha'
-                    value={fallbackInput}
-                    onChange={(e) => setFallbackInput(e.target.value)}
-                    style={{ padding: 6 }}
-                  />
-                  <button
-                    type='button'
-                    onClick={verifyFallbackCaptcha}
-                    style={{ padding: '6px 12px', cursor: 'pointer' }}
-                  >
-                    Refresh
-                  </button>
+            {/* --- FALLBACK CAPTCHA --- */}
+            {!enableRecaptcha && enableFallbackCaptcha && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 'bold',
+                    letterSpacing: 4,
+                    background: '#f4f4f4',
+                    color: '#000',
+                    padding: '10px 20px',
+                    userSelect: 'none',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {fallbackCode}
                 </div>
-              )}
+                <input
+                  placeholder='Enter captcha'
+                  value={fallbackInput}
+                  onChange={(e) => setFallbackInput(e.target.value)}
+                  style={{ padding: 6 }}
+                />
+                <button
+                  type='button'
+                  onClick={verifyFallbackCaptcha}
+                  style={{ padding: '6px 12px', cursor: 'pointer' }}
+                >
+                  Refresh
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -597,7 +595,7 @@ function LeadFormWithCaptcha({
               (enableRecaptcha &&
                 recaptchaVersion === 'v2' &&
                 !captchaVerified) ||
-              (enableFallbackCaptcha && !enableRecaptcha && !captchaVerified)
+              (!enableRecaptcha && enableFallbackCaptcha && !captchaVerified)
             }
             style={{
               background: buttonBgColor,
@@ -610,7 +608,8 @@ function LeadFormWithCaptcha({
                 loading ||
                 (enableRecaptcha &&
                   recaptchaVersion === 'v2' &&
-                  !captchaVerified)
+                  !captchaVerified) ||
+                (!enableRecaptcha && enableFallbackCaptcha && !captchaVerified)
                   ? 'not-allowed'
                   : 'pointer',
             }}
