@@ -46,6 +46,7 @@ function LeadFormWithCaptcha({
 
   /* ---------- RECAPTCHA ---------- */
   enableRecaptcha = true,
+  enableFallbackCaptcha = false,
   recaptchaVersion = 'v2',
   recaptchaSiteKey = '',
   recaptchaAlign = 'left',
@@ -290,7 +291,7 @@ function LeadFormWithCaptcha({
     try {
       const formPayload = new FormData();
       Object.entries(values).forEach(([key, value]) =>
-        formPayload.append(key, value)
+        formPayload.append(key, value),
       );
 
       const controller = new AbortController();
@@ -344,7 +345,7 @@ function LeadFormWithCaptcha({
       try {
         if (typeof window !== 'undefined') {
           const emailField = Object.values(form.fields || {}).find((field) =>
-            field.validate?.includes('email')
+            field.validate?.includes('email'),
           );
           if (emailField)
             localStorage.setItem('lead_email', values[emailField.handle]);
