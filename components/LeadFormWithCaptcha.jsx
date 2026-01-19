@@ -34,6 +34,13 @@ function MissingFormHandle() {
     </div>
   );
 }
+// refresh fallback captcha
+function refreshFallbackCaptcha() {
+  setFallbackCode(generateCaptcha());
+  setFallbackInput('');
+  setCaptchaVerified(false);
+}
+
 
 function LeadFormWithCaptcha({
   /* ---------- FORM ---------- */
@@ -137,11 +144,18 @@ function LeadFormWithCaptcha({
   const [fallbackCode, setFallbackCode] = useState('');
   const [fallbackInput, setFallbackInput] = useState('');
   const recaptchaRef = useRef(null);
+  const [googleCaptchaFailed, setGoogleCaptchaFailed] = useState(false);
 
-  const showGoogleCaptcha = enableRecaptcha && Boolean(recaptchaSiteKey);
+  const hasSiteKey = Boolean(recaptchaSiteKey?.trim());
+
+  const showGoogleCaptcha =
+    enableRecaptcha && hasSiteKey && !googleCaptchaFailed;
 
   const showFallbackCaptcha =
-    enableRecaptcha && enableFallbackCaptcha && !recaptchaSiteKey;
+    enableFallbackCaptcha && (!showGoogleCaptcha || !enableRecaptcha);
+  // const showGoogleCaptcha = enableRecaptcha && Boolean(recaptchaSiteKey);
+  // const showFallbackCaptcha =
+  //   enableRecaptcha && enableFallbackCaptcha && !recaptchaSiteKey;
 
 
   useEffect(() => {
@@ -291,8 +305,7 @@ function LeadFormWithCaptcha({
       return;
     }
 
-    // ---- FALLBACK FLOW ----
-    if (showFallbackCaptcha && !captchaVerified) {
+    if ((showGoogleCaptcha || showFallbackCaptcha) && !captchaVerified) {
       setFormError('Please verify captcha first');
       return;
     }
@@ -551,11 +564,21 @@ function LeadFormWithCaptcha({
                 sitekey={recaptchaSiteKey}
                 size={recaptchaVersion === 'v2' ? 'normal' : 'invisible'}
                 onChange={onRecaptchaVerify}
+                onErrored={() => {
+                  console.warn(
+                    'Google reCAPTCHA failed, switching to fallback',
+                  );
+                  setGoogleCaptchaFailed(true);
+                  setCaptchaVerified(false);
+                }}
+                onExpired={() => {
+                  setCaptchaVerified(false);
+                }}
               />
             )}
 
             {showFallbackCaptcha && (
-              <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div
                   style={{
                     fontSize: 18,
@@ -563,22 +586,38 @@ function LeadFormWithCaptcha({
                     letterSpacing: 4,
                     background: '#222',
                     color: '#fff',
-                    padding: 10,
+                    padding: '10px 14px',
                     display: 'inline-block',
+                    borderRadius: 4,
                   }}
                 >
                   {fallbackCode}
                 </div>
+
+                <button
+                  type='button'
+                  onClick={refreshFallbackCaptcha}
+                  title='Refresh captcha'
+                  style={{
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    borderRadius: 4,
+                  }}
+                >
+                  🔄
+                </button>
+
                 <input
                   placeholder='Enter captcha'
                   value={fallbackInput}
                   onChange={(e) => setFallbackInput(e.target.value)}
-                  style={{ marginLeft: 10, padding: 6 }}
+                  style={{ padding: 6, minWidth: 120 }}
                 />
+
                 <button
                   type='button'
                   onClick={verifyFallbackCaptcha}
-                  style={{ marginLeft: 10 }}
+                  style={{ padding: '6px 14px' }}
                 >
                   Verify
                 </button>
