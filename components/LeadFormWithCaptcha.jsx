@@ -34,12 +34,7 @@ function MissingFormHandle() {
     </div>
   );
 }
-// refresh fallback captcha
-function refreshFallbackCaptcha() {
-  setFallbackCode(generateCaptcha());
-  setFallbackInput('');
-  setCaptchaVerified(false);
-}
+
 
 
 function LeadFormWithCaptcha({
@@ -141,6 +136,7 @@ function LeadFormWithCaptcha({
   /* ---------- CAPTCHA STATE ---------- */
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
+  const [googleTimeoutHit, setGoogleTimeoutHit] = useState(false);
   const [fallbackCode, setFallbackCode] = useState('');
   const [fallbackInput, setFallbackInput] = useState('');
   const recaptchaRef = useRef(null);
@@ -149,19 +145,35 @@ function LeadFormWithCaptcha({
   const hasSiteKey = Boolean(recaptchaSiteKey?.trim());
 
   const showGoogleCaptcha =
-    enableRecaptcha && hasSiteKey && !googleCaptchaFailed;
+    enableRecaptcha && hasSiteKey && !googleCaptchaFailed && !googleTimeoutHit;
 
   const showFallbackCaptcha =
-    enableFallbackCaptcha && (!showGoogleCaptcha || !enableRecaptcha);
+    enableFallbackCaptcha &&
+    (!enableRecaptcha ||
+      !hasSiteKey ||
+      googleCaptchaFailed ||
+      googleTimeoutHit);
+
   // const showGoogleCaptcha = enableRecaptcha && Boolean(recaptchaSiteKey);
   // const showFallbackCaptcha =
   //   enableRecaptcha && enableFallbackCaptcha && !recaptchaSiteKey;
-
 
   useEffect(() => {
     setMounted(true);
     setFallbackCode(generateCaptcha());
   }, []);
+
+  useEffect(() => {
+    if (!enableRecaptcha || !hasSiteKey) return;
+
+    const timer = setTimeout(() => {
+      console.warn('reCAPTCHA load timeout, switching to fallback');
+      setGoogleTimeoutHit(true);
+    }, 4000); // 4s is enough for script load
+
+    return () => clearTimeout(timer);
+  }, [enableRecaptcha, hasSiteKey]);
+
 
   /* ---------- LOAD FORM ---------- */
   useEffect(() => {
@@ -189,6 +201,13 @@ function LeadFormWithCaptcha({
       .catch(() => setFormError(errorMessage));
   }, [mounted, formHandle, errorMessage]);
 
+  // Refresh fallback captcha
+  function refreshFallbackCaptcha() {
+    setFallbackCode(generateCaptcha());
+    setFallbackInput('');
+    setCaptchaVerified(false);
+  }
+
   /* ---------- CAPTCHA HANDLER ---------- */
   async function onRecaptchaVerify(token) {
     if (!token) return;
@@ -214,11 +233,25 @@ function LeadFormWithCaptcha({
           document.querySelector('form')?.requestSubmit();
         }
       } else {
+        console.warn('Captcha rejected by server, switching to fallback', data);
+
         setCaptchaVerified(false);
         setPendingSubmit(false);
-        alert('Captcha verification failed. Try again.');
-        recaptchaRef.current?.reset();
+
+        // 🔥 Force fallback mode
+        setGoogleCaptchaFailed(true);
+
+        // Optional UX
+        setFormError(
+          enableFallbackCaptcha
+            ? 'Google captcha failed. Please complete the fallback captcha.'
+            : 'Captcha verification failed. Please try again.',
+        );
+
+        // Reset Google widget
+        recaptchaRef.current?.reset?.();
       }
+
     } catch (err) {
       console.error('Captcha verify error', err);
       setCaptchaVerified(false);
@@ -565,9 +598,7 @@ function LeadFormWithCaptcha({
                 size={recaptchaVersion === 'v2' ? 'normal' : 'invisible'}
                 onChange={onRecaptchaVerify}
                 onErrored={() => {
-                  console.warn(
-                    'Google reCAPTCHA failed, switching to fallback',
-                  );
+                  console.warn('Google reCAPTCHA error, forcing fallback');
                   setGoogleCaptchaFailed(true);
                   setCaptchaVerified(false);
                 }}
