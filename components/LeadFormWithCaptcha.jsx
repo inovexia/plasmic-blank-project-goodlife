@@ -132,13 +132,13 @@ function LeadFormWithCaptcha({
   const [success, setSuccess] = useState('');
   const [isMobile, setIsMobile] = useState(false);
 
-
   /* ---------- CAPTCHA STATE ---------- */
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const [fallbackCode, setFallbackCode] = useState('');
   const [fallbackInput, setFallbackInput] = useState('');
   const recaptchaRef = useRef(null);
+  const submitEventRef = useRef(null);
 
   useEffect(() => {
     setMounted(true);
@@ -154,8 +154,6 @@ function LeadFormWithCaptcha({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-
 
   /* ---------- LOAD FORM ---------- */
   useEffect(() => {
@@ -201,12 +199,12 @@ function LeadFormWithCaptcha({
 
       if (data.success) {
         setCaptchaVerified(true);
-        // Continue submit flow for v3
-        if (recaptchaVersion === 'v3' && pendingSubmit) {
-          setPendingSubmit(false);
-          onSubmit(e);
-        }
+        setPendingSubmit(false);
 
+        // ✅ Continue submit after v3 verification
+        if (recaptchaVersion === 'v3' && submitEventRef.current) {
+          doSubmit();
+        }
       } else {
         setCaptchaVerified(false);
         setPendingSubmit(false);
@@ -220,6 +218,7 @@ function LeadFormWithCaptcha({
       recaptchaRef.current?.reset();
     }
   }
+
 
   function verifyFallbackCaptcha() {
     if (fallbackInput.toUpperCase() === fallbackCode) {
@@ -275,30 +274,8 @@ function LeadFormWithCaptcha({
     return Object.keys(errs).length === 0;
   }
 
-  /* ---------- SUBMIT ---------- */
-  async function onSubmit(e) {
-    e.preventDefault();
-    setSuccess('');
-    setFormError('');
-
-    // ---- V3 FLOW ----
-    if (
-      enableRecaptcha &&
-      recaptchaVersion === 'v3' &&
-      !captchaVerified &&
-      !pendingSubmit
-    ) {
-      setPendingSubmit(true);
-      recaptchaRef.current?.execute();
-      return;
-    }
-
-    // ---- V2 FLOW ----
-    if (enableRecaptcha && recaptchaVersion === 'v2' && !captchaVerified) {
-      setFormError('Please verify captcha first');
-      return;
-    }
-
+  /* ---------- DO SUBMIT ---------- */
+  async function doSubmit() {
     if (!validate()) return;
     setLoading(true);
 
@@ -372,7 +349,6 @@ function LeadFormWithCaptcha({
       setErrors({});
       setCaptchaVerified(false);
 
-      // Redirect immediately (React state updates do not block this)
       if (redirectUrl && typeof window !== 'undefined') {
         window.location.assign(redirectUrl);
       }
@@ -382,6 +358,39 @@ function LeadFormWithCaptcha({
       setLoading(false);
     }
   }
+
+  /* ---------- SUBMIT ---------- */
+  async function onSubmit(e) {
+    e.preventDefault();
+    setSuccess('');
+    setFormError('');
+
+    submitEventRef.current = e;
+
+    // ---- V3 FLOW ----
+    if (enableRecaptcha && recaptchaVersion === 'v3') {
+      if (!validate()) return;
+
+      setPendingSubmit(true);
+      recaptchaRef.current?.execute();
+      return;
+    }
+
+    // ---- V2 FLOW ----
+    if (enableRecaptcha && recaptchaVersion === 'v2' && !captchaVerified) {
+      setFormError('Please verify captcha first');
+      return;
+    }
+
+    // ---- FALLBACK FLOW ----
+    if (!enableRecaptcha && enableFallbackCaptcha && !captchaVerified) {
+      setFormError('Please verify captcha first');
+      return;
+    }
+
+    doSubmit();
+  }
+
 
   const alignMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
 
