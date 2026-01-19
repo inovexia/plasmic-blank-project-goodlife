@@ -130,6 +130,8 @@ function LeadFormWithCaptcha({
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
 
   /* ---------- CAPTCHA STATE ---------- */
   const [captchaVerified, setCaptchaVerified] = useState(false);
@@ -142,6 +144,18 @@ function LeadFormWithCaptcha({
     setMounted(true);
     setFallbackCode(generateCaptcha());
   }, []);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 768);
+    }
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+
 
   /* ---------- LOAD FORM ---------- */
   useEffect(() => {
@@ -387,7 +401,12 @@ function LeadFormWithCaptcha({
           }}
         >
           {Object.values(form.fields).map((field) => {
-            const colSpan = field.width === 50 ? 'span 6' : 'span 12';
+            const colSpan = isMobile
+              ? 'span 12'
+              : field.width === 50
+                ? 'span 6'
+                : 'span 12';
+
             const isCheckbox = field.type === 'checkboxes';
             return (
               <div key={field.handle} style={{ gridColumn: colSpan }}>
