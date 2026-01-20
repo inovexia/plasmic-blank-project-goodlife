@@ -14,9 +14,6 @@ export default function UtmTracker() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Prevent overwrite
-    if (localStorage.getItem('utm_first_touch')) return;
-
     const params = new URLSearchParams(window.location.search);
     const utms = {};
     let found = false;
@@ -29,6 +26,7 @@ export default function UtmTracker() {
       }
     });
 
+    // If no UTMs in URL, keep previous ones (optional behavior)
     if (!found) return;
 
     const payload = {
@@ -37,7 +35,7 @@ export default function UtmTracker() {
       timestamp: new Date().toISOString(),
     };
 
-    localStorage.setItem('utm_first_touch', JSON.stringify(payload));
+    localStorage.setItem('utm_last_touch', JSON.stringify(payload));
   }, []);
 
   return null;
