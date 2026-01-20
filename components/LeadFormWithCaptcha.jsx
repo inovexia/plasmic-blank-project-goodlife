@@ -395,9 +395,9 @@ function LeadFormWithCaptcha({
       setErrors({});
       setCaptchaVerified(false);
 
-      // if (redirectUrl && typeof window !== 'undefined') {
-      //   window.location.assign(redirectUrl);
-      // }
+      if (redirectUrl && typeof window !== 'undefined') {
+        window.location.assign(redirectUrl);
+      }
     } catch (err) {
       setFormError(err?.message || 'Form submission failed');
     } finally {
