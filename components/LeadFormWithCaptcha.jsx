@@ -301,7 +301,7 @@ function LeadFormWithCaptcha({
       const utmData = getUtmData();
       Object.entries(utmData).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          formPayload.append(`utm_${key}`, value.toString());
+          formPayload.append(`${key}`, value.toString());
         }
       });
 
