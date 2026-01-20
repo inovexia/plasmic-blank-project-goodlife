@@ -201,7 +201,7 @@ function LeadFormWithCaptcha({
         setCaptchaVerified(true);
         setPendingSubmit(false);
 
-        // ✅ Continue submit after v3 verification
+        // Continue submit after v3 verification
         if (recaptchaVersion === 'v3' && submitEventRef.current) {
           doSubmit();
         }
@@ -335,14 +335,36 @@ function LeadFormWithCaptcha({
 
       try {
         if (typeof window !== 'undefined') {
-          const emailField = Object.values(form.fields || {}).find((field) =>
-            field.validate?.includes('email'),
-          );
-          if (emailField)
-            localStorage.setItem('lead_email', values[emailField.handle]);
-          if (formHandle) localStorage.setItem('form_handle', formHandle);
+          const fields = Object.values(form.fields || {});
+
+          const emailField = fields.find((field) => {
+            const handle = (field.handle || '').toLowerCase();
+            const rules = field.validate || [];
+
+            const hasEmailRule = Array.isArray(rules)
+              ? rules.includes('email')
+              : typeof rules === 'string'
+                ? rules.includes('email')
+                : false;
+
+            return hasEmailRule || handle.includes('email');
+          });
+
+          if (emailField && values[emailField.handle]) {
+            localStorage.setItem(
+              'lead_email',
+              values[emailField.handle].toString().trim(),
+            );
+          }
+
+          if (formHandle) {
+            localStorage.setItem('form_handle', formHandle);
+          }
         }
-      } catch {}
+      } catch (e) {
+        console.warn('LocalStorage save failed', e);
+      }
+
 
       setSuccess(successMessage);
       setValues({});
