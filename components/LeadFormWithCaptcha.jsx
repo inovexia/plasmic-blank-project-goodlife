@@ -15,6 +15,17 @@ function generateCaptcha(length = 5) {
   ).join('');
 }
 
+/* ---------- GET UTM DATA ---------- */
+function getUtmData() {
+  try {
+    const stored = localStorage.getItem('utm_last_touch') 
+      || localStorage.getItem('utm_first_touch');
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
 /* ---------- EDITOR MESSAGE ---------- */
 function MissingFormHandle() {
   return (
@@ -281,9 +292,22 @@ function LeadFormWithCaptcha({
 
     try {
       const formPayload = new FormData();
-      Object.entries(values).forEach(([key, value]) =>
-        formPayload.append(key, value),
-      );
+      // Append form fields
+      Object.entries(values).forEach(([key, value]) => {
+        formPayload.append(key, value);
+      });
+
+      // Append UTM data
+      const utmData = getUtmData();
+      Object.entries(utmData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formPayload.append(`utm_${key}`, value.toString());
+        }
+      });
+
+      // Object.entries(values).forEach(([key, value]) =>
+      //   formPayload.append(key, value),
+      // );
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 12000);
