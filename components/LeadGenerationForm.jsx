@@ -25,6 +25,18 @@ function MissingFormHandle() {
   );
 }
 
+/* ---------- GET UTM DATA ---------- */
+function getUtmData() {
+  try {
+    const stored = localStorage.getItem('utm_last_touch') 
+      || localStorage.getItem('utm_first_touch');
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+
 function LeadGenerationForm({
   /* ---------- FORM ---------- */
   formHandle,
@@ -219,9 +231,19 @@ function LeadGenerationForm({
 
     try {
       const formPayload = new FormData();
-      Object.entries(values).forEach(([key, value]) =>
-        formPayload.append(key, value)
-      );
+      // Append form fields
+      Object.entries(values).forEach(([key, value]) => {
+        formPayload.append(key, value);
+      });
+
+      // Append UTM data
+      const utmData = getUtmData();
+
+      Object.entries(utmData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formPayload.append(`${key}`, value.toString());
+        }
+      });
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s max
